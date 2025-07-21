@@ -1,0 +1,10 @@
+{
+  "users": {
+    "2348142304526@s.whatsapp.net": {
+      "enabled": true,
+      "mode": "dm",
+      "targetJid": null
+    }
+  },
+  "groups": {}
+}
