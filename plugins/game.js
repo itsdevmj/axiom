@@ -374,7 +374,8 @@ command({
 // AUTO-ANSWER HANDLER (Text message handler)
 command({
     on: 'text',
-    fromMe: false
+    fromMe: false,
+    dontAddCommandList: true
 }, async (message, match, m) => {
     if (!message.text) return;
 

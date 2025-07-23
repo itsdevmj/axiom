@@ -1,16 +1,41 @@
-const { command, reply,  metaData, getBuffer, ytdl, shazam } = require("../lib");
+const { command, ytdl, getBuffer, metaData, reply, shazam } = require("../lib");
+const axios = require("axios");
 const acrcloud = require("acrcloud");
 const fs = require("fs-extra");
-const axios = require("axios");
 
 let tx;
-command({ pattern: "find", fromMe: false, desc: "Music finder", type: "download" }, async (message, match, m) => {
-    
-    
-let { msg , status , mime } = await reply(m, "audio&video");
-if(status == 0) return message.reply(msg);
-    
-let buff = await m.download();
+
+// Song downloader
+command({
+    pattern: "song",
+    fromMe: false,
+    desc: "Download songs",
+    type: "download"
+}, async (message, match, m) => {
+    if (!match) return message.reply("_i need a query_");
+    try {
+        let { title, url } = await (await axios(`https://tshepang-yasuke-martin.hf.space/yts?q=${match}`)).data[0];
+        let buff = await ytdl(url);
+        if (!Buffer.isBuffer(buff)) return; /*idk what to log so this will do for now*/
+        buff = await metaData(title, buff);
+
+        return await message.client.sendMessage(message.jid, { audio: buff, mimetype: "audio/mpeg" }, { quoted: m });
+    } catch (e) {
+        await console.log(e);
+    }
+});
+
+// Music finder
+command({ 
+    pattern: "find", 
+    fromMe: false, 
+    desc: "Music finder", 
+    type: "download" 
+}, async (message, match, m) => {
+    let { msg, status, mime } = await reply(m, "audio&video");
+    if (status == 0) return message.reply(msg);
+
+    let buff = await m.download();
     try {
         const acr = new acrcloud({
             host: "identify-eu-west-1.acrcloud.com",
@@ -34,10 +59,10 @@ let buff = await m.download();
             platform = "shazam";
         }
 
-        const { title , url , duration } = await ( await axios(`https://tshepang-yasuke-martin.hf.space/yts?q=${finder}`)).data[0];      
+        const { title, url, duration } = await (await axios(`https://tshepang-yasuke-martin.hf.space/yts?q=${finder}`)).data[0];
         let im = await getBuffer("https://files.catbox.moe/nr8x0o.jpg");
         tx = title;
-        let  text = `
+        let text = `
 ╭━━〘 𝑀𝑈𝑆𝐼𝐶 𝐹𝐼𝑁𝐷𝐸𝑅 〙
 ┃ 
 ┠ title: ${title}
@@ -45,7 +70,7 @@ let buff = await m.download();
 ┠ duration: ${duration}
 ┠ platform: ${platform}
 ┃ 
-╰━━━━━━━━━━━──⊷`
+╰━━━━━━━━━━━──⊷`;
 
         await message.client.sendMessage(message.jid, {
             text: text,
@@ -60,13 +85,17 @@ let buff = await m.download();
             }
         }, { quoted: m });
 
-
     } catch (e) {
         message.reply(e);
     }
 });
 
-command({ on: "text", fromMe: false }, async (message, match, m) => {
+// Get music from find command
+command({ 
+    on: "text", 
+    fromMe: false ,
+    dontAddCommandList: true
+}, async (message, match, m) => {
     if (match == "get" && m.quoted.text.includes("url")) {
         try {
             let final = m.quoted.text.split("┠ ")[2];

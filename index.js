@@ -16,14 +16,6 @@ EV.setMaxListeners(0);
 const simpleGit = require('simple-git');
 const git = simpleGit();
 
-const autoViewStatusDbPath = path.join(__dirname, 'resources/database/autoviewstatus.json');
-function readAutoViewStatus() {
-  if (!fs.existsSync(autoViewStatusDbPath)) {
-    fs.writeFileSync(autoViewStatusDbPath, JSON.stringify({ enabled: false }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(autoViewStatusDbPath, 'utf8'));
-}
-
 global.cache = {
     groups: new NodeCache({ stdTTL: 400, checkperiod: 320, useClones: false }), /*stdTTL == Standard Time-To-Live , the rest should make sense homieðŸ¦¦*/
     messages: new NodeCache({ stdTTL: 60, checkperiod: 80, useClones: false }),
