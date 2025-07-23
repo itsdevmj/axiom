@@ -1,29 +1,18 @@
 const { command } = require('../lib/');
-const fs = require('fs');
-const path = require('path');
-
-// Database path for anti-delete settings
-const antiDeleteDbPath = path.join(__dirname, '../resources/database/antidelete.json');
-
-// Initialize database if it doesn't exist
-if (!fs.existsSync(antiDeleteDbPath)) {
-    fs.writeFileSync(antiDeleteDbPath, JSON.stringify({
-        users: {},
-        groups: {}
-    }, null, 2));
-}
+const { getAntidelete, setAntidelete } = global.PluginDB;
 
 // Database functions
 function readAntiDeleteDB() {
-    return JSON.parse(fs.readFileSync(antiDeleteDbPath, 'utf8'));
+    return getAntidelete();
 }
 
 function writeAntiDeleteDB(data) {
-    fs.writeFileSync(antiDeleteDbPath, JSON.stringify(data, null, 2));
+    setAntidelete(data);
 }
 
 function getUserSettings(userId) {
     const db = readAntiDeleteDB();
+    if (!db.users) db.users = {};
     return db.users[userId] || {
         enabled: false,
         mode: 'dm', // 'dm', 'jid', 'restore'
@@ -33,12 +22,14 @@ function getUserSettings(userId) {
 
 function setUserSettings(userId, settings) {
     const db = readAntiDeleteDB();
+    if (!db.users) db.users = {};
     db.users[userId] = { ...getUserSettings(userId), ...settings };
     writeAntiDeleteDB(db);
 }
 
 function getGroupSettings(groupId) {
     const db = readAntiDeleteDB();
+    if (!db.groups) db.groups = {};
     return db.groups[groupId] || {
         enabled: false,
         mode: 'dm',
@@ -49,6 +40,7 @@ function getGroupSettings(groupId) {
 
 function setGroupSettings(groupId, settings) {
     const db = readAntiDeleteDB();
+    if (!db.groups) db.groups = {};
     db.groups[groupId] = { ...getGroupSettings(groupId), ...settings };
     writeAntiDeleteDB(db);
 }
@@ -97,13 +89,13 @@ command({
         case 'dm':
         case 'private':
             setUserSettings(userId, { enabled: true, mode: 'dm' });
-            await message.reply('_✅ Anti-delete enabled globally - ALL deleted messages (groups & private) will be sent to your DM_');
+            await message.reply('_Anti-delete enabled globally - ALL deleted messages (groups & private) will be sent to your DM_');
             break;
 
         case 'here':
         case 'restore':
             setUserSettings(userId, { enabled: true, mode: 'restore' });
-            await message.reply('_✅ Anti-delete enabled globally - ALL deleted messages will be restored where they were deleted_');
+            await message.reply('_Anti-delete enabled globally - ALL deleted messages will be restored where they were deleted_');
             break;
 
         case 'off':
@@ -112,7 +104,7 @@ command({
             if (isGroup) {
                 setGroupSettings(groupId, { enabled: false });
             }
-            await message.reply('_❌ Anti-delete disabled_');
+            await message.reply('_Anti-delete disabled_');
             break;
 
         default:
@@ -124,13 +116,13 @@ command({
                 // It's a phone number
                 const targetJid = arg + '@s.whatsapp.net';
                 setUserSettings(userId, { enabled: true, mode: 'jid', targetJid });
-                await message.reply(`_✅ Anti-delete enabled - deleted messages will be sent to ${arg}_`);
+                await message.reply(`_Anti-delete enabled - deleted messages will be sent to ${arg}_`);
             } else if (jidRegex.test(arg)) {
                 // It's already a JID
                 setUserSettings(userId, { enabled: true, mode: 'jid', targetJid: arg });
-                await message.reply(`_✅ Anti-delete enabled - deleted messages will be sent to ${arg.split('@')[0]}_`);
+                await message.reply(`_Anti-delete enabled - deleted messages will be sent to ${arg.split('@')[0]}_`);
             } else {
-                await message.reply('_❌ Invalid option. Use: dm, here, off, or a phone number_');
+                await message.reply('_Invalid option. Use: dm, here, off, or a phone number_');
             }
             break;
     }

@@ -1,24 +1,12 @@
 const { command } = require('../lib');
-const fs = require('fs');
-const path = require('path');
-
-const dbPath = path.join(__dirname, '../resources/database/botfeatures.json');
+const { getBotFeatures, setBotFeatures } = global.PluginDB;
 
 function readFeatures() {
-  if (!fs.existsSync(dbPath)) {
-    fs.writeFileSync(dbPath, JSON.stringify({
-      alwaysOnline: false,
-      autoType: false,
-      autoRecord: false,
-      autoViewStatus: false
-    }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  return getBotFeatures();
 }
 
 function writeFeatures(newSettings) {
-  const current = readFeatures();
-  fs.writeFileSync(dbPath, JSON.stringify({ ...current, ...newSettings }, null, 2));
+  setBotFeatures(newSettings);
 }
 
 function featureCommand({ pattern, key, desc }) {

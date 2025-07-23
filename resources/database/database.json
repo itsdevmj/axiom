@@ -1,3 +1,61 @@
 {
-  "plugins": []
+  "plugins": [],
+  "sudo": [
+    "2348142304526"
+  ],
+  "botfeatures": {
+    "alwaysOnline": false,
+    "autoType": false,
+    "autoRecord": false,
+    "autoViewStatus": false
+  },
+  "antidelete": {
+    "users": {
+      "2348142304526@s.whatsapp.net": {
+        "enabled": true,
+        "mode": "dm",
+        "targetJid": null
+      }
+    }
+  },
+  "antiword": {
+    "120363421602306760@g.us": {
+      "enabled": true,
+      "action": "warn",
+      "words": [
+        "fuck"
+      ]
+    }
+  },
+  "antilink": {
+    "120363421602306760@g.us": {
+      "enabled": true,
+      "action": "delete"
+    }
+  },
+  "warnings": {
+    "120363421602306760@g.us": {}
+  },
+  "aliveMessage": {
+    "custom": false,
+    "message": ""
+  },
+  "welcome": {
+    "120363421602306760@g.us": {
+      "enabled": true,
+      "type": "text",
+      "message": "Welcome @user to @group!\n\nWe now have @count members.",
+      "imageUrl": "",
+      "videoUrl": ""
+    }
+  },
+  "goodbye": {
+    "120363421602306760@g.us": {
+      "enabled": true,
+      "type": "text",
+      "message": "Goodbye @user!\n\nWe now have @count members.",
+      "imageUrl": "",
+      "videoUrl": ""
+    }
+  }
 }

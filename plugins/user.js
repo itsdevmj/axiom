@@ -1,5 +1,27 @@
 const { command } = require('../lib');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const fs = require('fs');
+const path = require('path');
+const sudoPath = path.join(__dirname, '../resources/database/sudo.json');
+const { getSudoList, setSudoList } = global.PluginDB;
+
+function loadSudoList() {
+    if (fs.existsSync(sudoPath)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(sudoPath, 'utf8'));
+            if (Array.isArray(data)) return data;
+        } catch (e) {}
+    }
+    return global.config.SUDO || [];
+}
+
+function saveSudoList(list) {
+    fs.writeFileSync(sudoPath, JSON.stringify(list, null, 2));
+}
+
+// On load, sync global.config.SUDO with DB
+const persistedSudo = getSudoList();
+global.config.SUDO = persistedSudo;
 
 const validateNumber = (number) => {
     const cleaned = number.replace(/\D/g, '');
@@ -32,10 +54,6 @@ command({
         for (const sudoNumber of sudoUsers) {
             try {
                 const sudoJid = sudoNumber.includes('@') ? sudoNumber : `${sudoNumber}@s.whatsapp.net`;
-
-                // Debug log to see message structure
-                console.log('Message type:', repliedMessage.type);
-                console.log('Message keys:', Object.keys(repliedMessage));
 
                 // Handle different message types - just forward raw content
                 if (repliedMessage.image || repliedMessage.type === 'imageMessage') {
@@ -420,6 +438,7 @@ command({
 
     sudoList.push(number);
     global.config.SUDO = sudoList;
+    setSudoList(sudoList);
     await message.reply(`_Added ${number} to sudo users._`);
 });
 
@@ -441,6 +460,7 @@ command({
 
     sudoList.splice(index, 1);
     global.config.SUDO = sudoList;
+    setSudoList(sudoList);
     await message.reply(`_Removed ${number} from sudo users._`);
 });
 
@@ -450,7 +470,7 @@ command({
     desc: "List sudo users",
     type: "user"
 }, async (message) => {
-    const sudoList = global.config.SUDO || [];
+    const sudoList = getSudoList();
     if (sudoList.length === 0) {
         return await message.reply("_No sudo users configured._");
     }

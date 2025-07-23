@@ -13,6 +13,8 @@ const port = global.config.PORT;
 const NodeCache = require('node-cache');
 const EV = require("events");
 EV.setMaxListeners(0);
+const simpleGit = require('simple-git');
+const git = simpleGit();
 
 const autoViewStatusDbPath = path.join(__dirname, 'resources/database/autoviewstatus.json');
 function readAutoViewStatus() {
@@ -22,23 +24,124 @@ function readAutoViewStatus() {
   return JSON.parse(fs.readFileSync(autoViewStatusDbPath, 'utf8'));
 }
 
-const botFeaturesPath = path.join(__dirname, 'resources/database/botfeatures.json');
-function readBotFeatures() {
-  if (!fs.existsSync(botFeaturesPath)) {
-    fs.writeFileSync(botFeaturesPath, JSON.stringify({
-      alwaysOnline: false,
-      autoType: false,
-      autoRecord: false,
-      autoViewStatus: false
-    }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(botFeaturesPath, 'utf8'));
-}
-
 global.cache = {
     groups: new NodeCache({ stdTTL: 400, checkperiod: 320, useClones: false }), /*stdTTL == Standard Time-To-Live , the rest should make sense homieðŸ¦¦*/
     messages: new NodeCache({ stdTTL: 60, checkperiod: 80, useClones: false }),
 };
+
+// Helper functions for welcome/goodbye messages
+async function processWelcomeGoodbyeMessage(text, participant, groupMetadata) {
+    if (!text) return null;
+    
+    const userName = 'User'; // Default name since we don't have user info in participant update
+    const userNumber = participant.split('@')[0];
+    const groupName = groupMetadata.subject || 'Group';
+    const groupDesc = groupMetadata.desc || 'No description';
+    const memberCount = groupMetadata.participants.length;
+    const currentTime = new Date().toLocaleString();
+    const currentDate = new Date().toLocaleDateString();
+    
+    return text
+        .replace(/@user/gi, userName)
+        .replace(/@name/gi, userName)
+        .replace(/@number/gi, userNumber)
+        .replace(/@group/gi, groupName)
+        .replace(/@desc/gi, groupDesc)
+        .replace(/@count/gi, memberCount.toString())
+        .replace(/@members/gi, memberCount.toString())
+        .replace(/@time/gi, currentTime)
+        .replace(/@date/gi, currentDate)
+        .replace(/@bot/gi, global.config.BOT_NAME || 'Bot')
+        .replace(/@owner/gi, global.config.OWNER_NAME || 'Owner');
+}
+
+async function handleWelcomeMessage(conn, groupId, participant, groupMetadata, settings) {
+    try {
+        const { getBuffer } = require("./lib/functions");
+        const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
+        if (!processedText) return;
+        
+        if (settings.type === 'image' && settings.imageUrl) {
+            const imageBuffer = await getBuffer(settings.imageUrl);
+            await conn.sendMessage(groupId, {
+                image: imageBuffer,
+                caption: processedText,
+                mentions: [participant]
+            });
+        } else if (settings.type === 'video' && settings.videoUrl) {
+            const videoBuffer = await getBuffer(settings.videoUrl);
+            await conn.sendMessage(groupId, {
+                video: videoBuffer,
+                caption: processedText,
+                mentions: [participant]
+            });
+        } else {
+            // Text message
+            await conn.sendMessage(groupId, {
+                text: processedText,
+                mentions: [participant]
+            });
+        }
+    } catch (error) {
+        console.log('Error in handleWelcomeMessage:', error);
+        // Fallback to text message
+        try {
+            const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
+            if (processedText) {
+                await conn.sendMessage(groupId, {
+                    text: processedText,
+                    mentions: [participant]
+                });
+            }
+        } catch (fallbackError) {
+            console.log('Error in welcome message fallback:', fallbackError);
+        }
+    }
+}
+
+async function handleGoodbyeMessage(conn, groupId, participant, groupMetadata, settings) {
+    try {
+        const { getBuffer } = require("./lib/functions");
+        const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
+        if (!processedText) return;
+        
+        if (settings.type === 'image' && settings.imageUrl) {
+            const imageBuffer = await getBuffer(settings.imageUrl);
+            await conn.sendMessage(groupId, {
+                image: imageBuffer,
+                caption: processedText,
+                mentions: [participant]
+            });
+        } else if (settings.type === 'video' && settings.videoUrl) {
+            const videoBuffer = await getBuffer(settings.videoUrl);
+            await conn.sendMessage(groupId, {
+                video: videoBuffer,
+                caption: processedText,
+                mentions: [participant]
+            });
+        } else {
+            // Text message
+            await conn.sendMessage(groupId, {
+                text: processedText,
+                mentions: [participant]
+            });
+        }
+    } catch (error) {
+        console.log('Error in handleGoodbyeMessage:', error);
+        // Fallback to text message
+        try {
+            const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
+            if (processedText) {
+                await conn.sendMessage(groupId, {
+                    text: processedText,
+                    mentions: [participant]
+                });
+            }
+        } catch (fallbackError) {
+            console.log('Error in goodbye message fallback:', fallbackError);
+        }
+    }
+}
 
 if (!fs.existsSync("./resources/auth/creds.json")) {
     MakeSession(global.config.SESSION_ID, "./resources/auth/creds.json").then(() =>
@@ -116,7 +219,34 @@ async function Iris() {
                     console.log("Connecting to WhatsApp...");
                     console.log("Connected");
                     await delay(5000);
-                    await conn.sendMessage(conn.user.id, { text: `Iris connected` });
+                    const pkg = require("./package.json");
+                    const botName = global.config.BOT_NAME || pkg.name;
+                    const version = pkg.version;
+                    const owner = global.config.OWNER_NAME || global.config.AUTHOR;
+                    const workType = global.config.WORK_TYPE;
+                    const { getBotFeatures } = global.PluginDB;
+                    const botFeatures = getBotFeatures();
+                    const featuresList = Object.entries(botFeatures)
+                        .map(([key, value]) => `${key}: ${value ? 'Enabled' : 'Disabled'}`)
+                        .join("\n");
+                    let updateMsg = '';
+                    try {
+                        await git.fetch();
+                        const status = await git.status();
+                        if (status.behind > 0) {
+                            updateMsg = `\nUpdate available: Your bot is ${status.behind} commit(s) behind the remote.`;
+                        }
+                    } catch (e) {
+                        // Ignore git errors in startup message
+                    }
+                    const infoMsg =
+                        `${botName} is now connected.\n` +
+                        `Version: ${version}\n` +
+                        `Owner: ${owner}\n` +
+                        `Mode: ${workType}\n` +
+                        `\nFeatures:\n${featuresList}` +
+                        (updateMsg ? `\n\n${updateMsg}` : '');
+                    await conn.sendMessage(conn.user.id, { text: infoMsg });
                 }
                 if (connection === "close") {
                     if (lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut) {
@@ -357,12 +487,12 @@ async function Iris() {
                             // Send context message for media without captions
                             if (messageType === 'stickerMessage') {
                                 await client.sendMessage(targetJid, {
-                                    text: `_🔄 Sticker restored by Anti-Delete_`
+                                    text: `_Sticker restored by Anti-Delete_`
                                 });
                             } else if (messageType === 'audioMessage') {
                                 const isVoiceNote = rawMessage.message.audioMessage?.ptt;
                                 await client.sendMessage(targetJid, {
-                                    text: `_🔄 ${isVoiceNote ? 'Voice note' : 'Audio'} restored by Anti-Delete_`
+                                    text: `_${isVoiceNote ? 'Voice note' : 'Audio'} restored by Anti-Delete_`
                                 });
                             }
 
@@ -460,6 +590,43 @@ async function Iris() {
             try {
                 const metadata = await conn.groupMetadata(event.id);
                 global.cache.groups.set(event.id, metadata);
+                
+                // Handle welcome/goodbye messages
+                console.log('Group participant update:', {
+                    groupId: event.id,
+                    action: event.action,
+                    participants: event.participants
+                });
+                
+                if (global.PluginDB) {
+                    const { getWelcome, getGoodbye } = global.PluginDB;
+                    const welcome = getWelcome();
+                    const goodbye = getGoodbye();
+                    const welcomeSettings = welcome[event.id];
+                    const goodbyeSettings = goodbye[event.id];
+                    
+                    // Handle new members (welcome)
+                    if (event.action === 'add' && welcomeSettings && welcomeSettings.enabled) {
+                        for (const participant of event.participants) {
+                            try {
+                                await handleWelcomeMessage(conn, event.id, participant, metadata, welcomeSettings);
+                            } catch (e) {
+                                console.log('Error sending welcome message:', e);
+                            }
+                        }
+                    }
+                    
+                    // Handle members leaving (goodbye)
+                    if (event.action === 'remove' && goodbyeSettings && goodbyeSettings.enabled) {
+                        for (const participant of event.participants) {
+                            try {
+                                await handleGoodbyeMessage(conn, event.id, participant, metadata, goodbyeSettings);
+                            } catch (e) {
+                                console.log('Error sending goodbye message:', e);
+                            }
+                        }
+                    }
+                }
             } catch (err) {
                 console.error(`Failed to get group metadata for ${event.id}:`, err.message);
                 global.cache.groups.del(event.id);
@@ -474,7 +641,7 @@ async function Iris() {
                 if (!msg) return;
 
                 // --- Bot features logic ---
-                const features = readBotFeatures();
+                const features = global.PluginDB.getBotFeatures();
                 const jid = msg.key && msg.key.remoteJid;
                 if (jid && !jid.endsWith("@broadcast")) {
                   if (features.alwaysOnline) {

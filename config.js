@@ -14,7 +14,7 @@ global.config = {
   ALWAYS_ONLINE: process.env.ALWAYS_ONLINE === 'true' || false,
   LOGS: process.env.LOGS === 'true' || true,
   ANTILINK_ACTION: process.env.ANTI_LINK || 'kick',
-  SESSION_ID: process.env.SESSION_ID || '',
+  SESSION_ID: process.env.SESSION_ID || '936205dd8e58d86b61f9aeb0083c8ebf',
   PORT: process.env.PORT || 8000,
   HANDLERS: process.env.HANDLER || '.',
   BRANCH: 'master',
@@ -23,7 +23,7 @@ global.config = {
   SUDO: initialSudo,
   CALL_REJECT: process.env.CALL_REJECT === 'true' || false,
   OWNER_NAME: process.env.OWNER_NAME || 'masterj',
-  BOT_NAME: process.env.BOT_NAME || '𝐼𝑅𝐼𝑆−𝑀𝐷',
+  BOT_NAME: process.env.BOT_NAME || 'Axiom',
   WORK_TYPE: process.env.WORK_TYPE || 'private',
   AUTO_VIEW_STATUS: process.env.AUTO_VIEW_STATUS === 'true' || false,
 };
