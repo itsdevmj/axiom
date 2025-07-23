@@ -575,39 +575,136 @@ ${responseTime < 200 ? 'Status: All systems operational' : 'Status: System under
 });
 
 // View once decryptor
-command({ 
-    pattern: "vo", 
-    fromMe: true, 
-    desc: "Decrypt view once", 
-    type: "user" 
-}, async (message, match, m) => {
-    if (!m.quoted.message.viewOnceMessageV2) return;
+command({
+    pattern: "vo",
+    fromMe: true,
+    desc: "Decrypt view once messages",
+    type: "user"
+}, async (message, match) => {
+    try {
+        // Check if user replied to a message
+        if (!message.reply_message) {
+            return await message.reply('_Reply to a view once message to decrypt it_\nExample: Reply to view once photo/video and type `.vo`');
+        }
 
-    const buffer = await m.quoted.download();
+        const quotedMessage = message.reply_message;
 
-    let res;
+        // Debug: Log the message structure
+        // console.log('Quoted message structure:', JSON.stringify(quotedMessage, null, 2));
 
-    if (m.quoted.message.viewOnceMessageV2.message.imageMessage) {
-        res = "picture";
-    } else if (m.quoted.message.viewOnceMessageV2.message.videoMessage) {
-        res = "video";
-    }
+        // Check for different view once message structures
+        let viewOnceMessage = null;
+        let mediaType = null;
+        let isViewOnce = false;
 
-    switch (res) {
-        case "picture":
-            return message.client.sendMessage(
-                message.jid,
-                { image: buffer, mimetype: "image/jpeg" },
-                { quoted: m }
-            );
-            break;
-        case "video":
-            return message.client.sendMessage(
-                message.jid,
-                { video: buffer, mimetype: "video/mp4" },
-                { quoted: m }
-            );
-            break;
+        // Method 1: Check for viewOnceMessageV2 (newer format)
+        if (quotedMessage.message?.viewOnceMessageV2?.message) {
+            viewOnceMessage = quotedMessage.message.viewOnceMessageV2.message;
+            isViewOnce = true;
+            console.log('Found viewOnceMessageV2');
+        }
+        // Method 2: Check for viewOnceMessage (older format)  
+        else if (quotedMessage.message?.viewOnceMessage?.message) {
+            viewOnceMessage = quotedMessage.message.viewOnceMessage.message;
+            isViewOnce = true;
+            console.log('Found viewOnceMessage');
+        }
+        // Method 3: Direct viewOnce property
+        else if (quotedMessage.viewOnceMessage) {
+            viewOnceMessage = quotedMessage.viewOnceMessage;
+            isViewOnce = true;
+            console.log('Found direct viewOnceMessage');
+        }
+        // Method 4: Check if message has viewOnce flag
+        else if (quotedMessage.message && (quotedMessage.message.imageMessage?.viewOnce || quotedMessage.message.videoMessage?.viewOnce)) {
+            viewOnceMessage = quotedMessage.message;
+            isViewOnce = true;
+            console.log('Found viewOnce flag in message');
+        }
+        // Method 5: Check for ephemeralMessage containing viewOnce
+        else if (quotedMessage.message?.ephemeralMessage?.message?.viewOnceMessageV2) {
+            viewOnceMessage = quotedMessage.message.ephemeralMessage.message.viewOnceMessageV2.message;
+            isViewOnce = true;
+            console.log('Found ephemeral viewOnceMessageV2');
+        }
+
+        if (!isViewOnce || !viewOnceMessage) {
+            // Debug info for troubleshooting
+            const messageKeys = quotedMessage.message ? Object.keys(quotedMessage.message) : [];
+            console.log('Available message keys:', messageKeys);
+
+            return await message.reply(`_This is not a view once message_\nPlease reply to a view once photo or video\n\nDebug: Message keys found: ${messageKeys.join(', ')}`);
+        }
+
+        // Determine media type and download
+        let buffer;
+        let caption = '';
+
+        if (viewOnceMessage.imageMessage) {
+            mediaType = "image";
+            try {
+                buffer = await downloadMediaMessage(quotedMessage, 'buffer', { reuploadRequest: message.client.updateMediaMessage });
+                // Check multiple locations for caption
+                caption = viewOnceMessage.imageMessage.caption ||
+                    quotedMessage.caption ||
+                    quotedMessage.message?.imageMessage?.caption ||
+                    '';
+            } catch (downloadError) {
+                console.log('Image download error:', downloadError);
+                // Try alternative download method
+                buffer = await quotedMessage.download();
+                caption = viewOnceMessage.imageMessage.caption ||
+                    quotedMessage.caption ||
+                    quotedMessage.message?.imageMessage?.caption ||
+                    '';
+            }
+        } else if (viewOnceMessage.videoMessage) {
+            mediaType = "video";
+            try {
+                buffer = await downloadMediaMessage(quotedMessage, 'buffer', { reuploadRequest: message.client.updateMediaMessage });
+                // Check multiple locations for caption
+                caption = viewOnceMessage.videoMessage.caption ||
+                    quotedMessage.caption ||
+                    quotedMessage.message?.videoMessage?.caption ||
+                    '';
+            } catch (downloadError) {
+                console.log('Video download error:', downloadError);
+                // Try alternative download method
+                buffer = await quotedMessage.download();
+                caption = viewOnceMessage.videoMessage.caption ||
+                    quotedMessage.caption ||
+                    quotedMessage.message?.videoMessage?.caption ||
+                    '';
+            }
+        } else {
+            const availableTypes = Object.keys(viewOnceMessage);
+            return await message.reply(`_Unsupported view once message type_\nOnly images and videos are supported\n\nDebug: Found types: ${availableTypes.join(', ')}`);
+        }
+
+        if (!buffer) {
+            return await message.reply('_Failed to download view once media_\nThe media might be expired or corrupted');
+        }
+
+        // Send the decrypted media
+        const decryptedCaption = caption ? `${caption}` : '';
+
+        if (mediaType === "image") {
+            await message.client.sendMessage(message.jid, {
+                image: buffer,
+                caption: decryptedCaption
+            });
+        } else if (mediaType === "video") {
+            await message.client.sendMessage(message.jid, {
+                video: buffer,
+                caption: decryptedCaption
+            });
+        }
+
+        console.log(`View once ${mediaType} decrypted successfully`);
+
+    } catch (error) {
+        console.log('View once decrypt error:', error);
+        await message.reply(`_Failed to decrypt view once message_\nError: ${error.message}\n\nMake sure you replied to a valid view once photo or video`);
     }
 });
 
