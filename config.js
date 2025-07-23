@@ -23,11 +23,7 @@ global.config = {
   SUDO: initialSudo,
   CALL_REJECT: process.env.CALL_REJECT === 'true' || false,
   OWNER_NAME: process.env.OWNER_NAME || 'masterj',
-<<<<<<< HEAD
-  BOT_NAME: process.env.BOT_NAME || 'Axiom',
-=======
   BOT_NAME: process.env.BOT_NAME || 'axiom',
->>>>>>> a581e6c394c0864be1c65edd889103f400eaa36e
   WORK_TYPE: process.env.WORK_TYPE || 'private',
   AUTO_VIEW_STATUS: process.env.AUTO_VIEW_STATUS === 'true' || false,
 };
