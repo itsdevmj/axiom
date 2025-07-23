@@ -23,7 +23,9 @@ const defaultDB = {
   welcome: {},
   goodbye: {},
   afk: {},
-  sticky: {}
+  sticky: {},
+  autoreact: {},
+  wordgame: {}
 };
 
 function readDB() {
@@ -225,6 +227,52 @@ function removeSticky(stickerId) {
   return false;
 }
 
+function getAutoReact() {
+  const db = readDB();
+  return db.autoreact || {};
+}
+
+function setAutoReact(chatId, data) {
+  const db = readDB();
+  if (!db.autoreact) db.autoreact = {};
+  db.autoreact[chatId] = data;
+  writeDB(db);
+}
+
+function removeAutoReact(chatId) {
+  const db = readDB();
+  if (!db.autoreact) db.autoreact = {};
+  if (db.autoreact[chatId]) {
+    delete db.autoreact[chatId];
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
+function getWordGame() {
+  const db = readDB();
+  return db.wordgame || {};
+}
+
+function setWordGame(gameId, data) {
+  const db = readDB();
+  if (!db.wordgame) db.wordgame = {};
+  db.wordgame[gameId] = data;
+  writeDB(db);
+}
+
+function removeWordGame(gameId) {
+  const db = readDB();
+  if (!db.wordgame) db.wordgame = {};
+  if (db.wordgame[gameId]) {
+    delete db.wordgame[gameId];
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
 global.PluginDB = {
   installPlugin,
   getPlugins,
@@ -253,5 +301,11 @@ global.PluginDB = {
   removeAfk,
   getSticky,
   setSticky,
-  removeSticky
+  removeSticky,
+  getAutoReact,
+  setAutoReact,
+  removeAutoReact,
+  getWordGame,
+  setWordGame,
+  removeWordGame
 };

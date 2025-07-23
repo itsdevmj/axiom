@@ -6,7 +6,7 @@ const instagramRegex = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/[^\s]+/;
 const facebookRegex = /(?:https?:\/\/)?(?:www\.)?facebook\.com\/[^\s]+/;
 const tiktokRegex = /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/[^\s]+/;
 
-command({ pattern: "socials" , on: "text", fromMe: false , desc: "TT/FB/Insta" ,type: "auto" }, async (message, match, m) => {
+command({ pattern: "socials", on: "text", fromMe: false, desc: "TT/FB/Insta", type: "auto" }, async (message, match, m) => {
   if (
     !instagramRegex.test(match) &&
     !facebookRegex.test(match) &&
@@ -48,14 +48,14 @@ command({ pattern: "socials" , on: "text", fromMe: false , desc: "TT/FB/Insta" ,
         { quoted: m }
       );
     } else {
-      if(match == "https://www.tiktok.com/tiktoklite") return message.reply("You tweaking twin, that's an app url");
+      if (match == "https://www.tiktok.com/tiktoklite") return message.reply("You tweaking twin, that's an app url");
       const { data } = await axios.get(
         `https://tshepang-yasuke-martin.hf.space/tiktok?url=${match}`
       );
 
       if (data.status !== true) return;
 
-           for (const item of data.media) {
+      for (const item of data.media) {
         if (
           item.type === "video" &&
           item.text.toLowerCase() === "download without watermark (hd)"

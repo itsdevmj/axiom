@@ -68,7 +68,7 @@
       "createdByName": "Master-j",
       "timestamp": 1753274598377,
       "groupId": null,
-      "usageCount": 2
+      "usageCount": 5
     },
     "3262585165594e687941363769357a6c754d71352f327a354674625563684e415345453538476931776b303d": {
       "command": ".menu",
@@ -76,7 +76,29 @@
       "createdByName": "Master-j",
       "timestamp": 1753274682540,
       "groupId": null,
-      "usageCount": 1
+      "usageCount": 3
     }
-  }
+  },
+  "autoreact": {
+    "2348142304526@s.whatsapp.net": {
+      "enabled": true,
+      "mode": "both",
+      "emojis": [
+        "❤️",
+        "🤗",
+        "👏",
+        "🙏",
+        "💪"
+      ],
+      "probability": 0.2,
+      "keywords": {
+        "help": "🤗",
+        "support": "💪",
+        "thanks": "🙏",
+        "great": "👏",
+        "well done": "👏"
+      }
+    }
+  },
+  "wordgame": {}
 }
