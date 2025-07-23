@@ -10,7 +10,7 @@ function loadSudoList() {
         try {
             const data = JSON.parse(fs.readFileSync(sudoPath, 'utf8'));
             if (Array.isArray(data)) return data;
-        } catch (e) {}
+        } catch (e) { }
     }
     return global.config.SUDO || [];
 }
@@ -477,4 +477,97 @@ command({
 
     const formattedList = sudoList.map(num => `• ${num}`).join('\n');
     await message.reply(`*Sudo Users:*\n${formattedList}`);
+});
+
+// Ping command - Check bot response time and system info
+command({
+    pattern: "ping",
+    fromMe: false,
+    desc: "Check bot response time and system information",
+    type: "user"
+}, async (message) => {
+    const startTime = Date.now();
+
+    // Send initial ping message
+    const pingMessage = await message.reply("*Pinging...*");
+
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+
+    // Get system information
+    const uptime = process.uptime();
+    const memoryUsage = process.memoryUsage();
+
+    // Format uptime
+    const formatUptime = (seconds) => {
+        const days = Math.floor(seconds / (24 * 60 * 60));
+        const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((seconds % (60 * 60)) / 60);
+        const secs = Math.floor(seconds % 60);
+
+        if (days > 0) {
+            return `${days}d ${hours}h ${minutes}m ${secs}s`;
+        } else if (hours > 0) {
+            return `${hours}h ${minutes}m ${secs}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+        } else {
+            return `${secs}s`;
+        }
+    };
+
+    // Format memory usage
+    const formatBytes = (bytes) => {
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        if (bytes === 0) return '0 Bytes';
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    };
+
+    // Get ping status
+    const getPingStatus = (time) => {
+        if (time < 100) return "EXCELLENT";
+        if (time < 300) return "GOOD";
+        if (time < 500) return "FAIR";
+        return "POOR";
+    };
+
+    // Get current timestamp
+    const currentTime = new Date().toLocaleString();
+
+    // Build response message
+    const pingResponse = `*System Status Report*
+
+*Response Analysis*
+Response Time: ${responseTime}ms
+Performance: ${getPingStatus(responseTime)}
+
+*System Uptime*
+Bot Runtime: ${formatUptime(uptime)}
+
+*Memory Utilization*
+Heap Used: ${formatBytes(memoryUsage.heapUsed)}
+Heap Total: ${formatBytes(memoryUsage.heapTotal)}
+Resident Set Size: ${formatBytes(memoryUsage.rss)}
+
+*Bot Configuration*
+Name: ${global.config.BOT_NAME || 'Axiom'}
+Owner: ${global.config.OWNER_NAME || 'Owner'}
+Version: 2.0.0
+
+*Report Generated*
+${currentTime}
+
+${responseTime < 200 ? 'Status: All systems operational' : 'Status: System under load'}`;
+
+    // Edit the original ping message with detailed response
+    try {
+        await message.client.sendMessage(message.jid, {
+            text: pingResponse,
+            edit: pingMessage.key
+        });
+    } catch (error) {
+        // If edit fails, send new message
+        await message.reply(pingResponse);
+    }
 });

@@ -34,7 +34,9 @@
     }
   },
   "warnings": {
-    "120363421602306760@g.us": {}
+    "120363421602306760@g.us": {
+      "undefined": 1
+    }
   },
   "aliveMessage": {
     "custom": false,
@@ -56,6 +58,25 @@
       "message": "Goodbye @user!\n\nWe now have @count members.",
       "imageUrl": "",
       "videoUrl": ""
+    }
+  },
+  "afk": {},
+  "sticky": {
+    "373373334a63562b4b7448396753493076776851355577442b73515a6c4c443063377467795059464f666b3d": {
+      "command": ".alive",
+      "createdBy": "2348142304526@s.whatsapp.net",
+      "createdByName": "Master-j",
+      "timestamp": 1753274598377,
+      "groupId": null,
+      "usageCount": 2
+    },
+    "3262585165594e687941363769357a6c754d71352f327a354674625563684e415345453538476931776b303d": {
+      "command": ".menu",
+      "createdBy": "2348142304526@s.whatsapp.net",
+      "createdByName": "Master-j",
+      "timestamp": 1753274682540,
+      "groupId": null,
+      "usageCount": 1
     }
   }
 }

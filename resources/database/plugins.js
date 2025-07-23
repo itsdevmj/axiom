@@ -21,7 +21,9 @@ const defaultDB = {
   antiword: {},
   warnings: {},
   welcome: {},
-  goodbye: {}
+  goodbye: {},
+  afk: {},
+  sticky: {}
 };
 
 function readDB() {
@@ -177,6 +179,52 @@ function setGoodbye(groupId, data) {
   writeDB(db);
 }
 
+function getAfk() {
+  const db = readDB();
+  return db.afk || {};
+}
+
+function setAfk(userId, data) {
+  const db = readDB();
+  if (!db.afk) db.afk = {};
+  db.afk[userId] = data;
+  writeDB(db);
+}
+
+function removeAfk(userId) {
+  const db = readDB();
+  if (!db.afk) db.afk = {};
+  if (db.afk[userId]) {
+    delete db.afk[userId];
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
+function getSticky() {
+  const db = readDB();
+  return db.sticky || {};
+}
+
+function setSticky(stickerId, data) {
+  const db = readDB();
+  if (!db.sticky) db.sticky = {};
+  db.sticky[stickerId] = data;
+  writeDB(db);
+}
+
+function removeSticky(stickerId) {
+  const db = readDB();
+  if (!db.sticky) db.sticky = {};
+  if (db.sticky[stickerId]) {
+    delete db.sticky[stickerId];
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
 global.PluginDB = {
   installPlugin,
   getPlugins,
@@ -199,5 +247,11 @@ global.PluginDB = {
   getWelcome,
   setWelcome,
   getGoodbye,
-  setGoodbye
+  setGoodbye,
+  getAfk,
+  setAfk,
+  removeAfk,
+  getSticky,
+  setSticky,
+  removeSticky
 };
