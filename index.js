@@ -240,7 +240,6 @@ async function Iris() {
                             updateMsg = `\nUpdate available: Your bot is ${status.behind} commit(s) behind the remote.`;
                         }
                     } catch (e) {
-                        // Ignore git errors in startup message
                     }
                     const infoMsg =
                         `${botName} is now connected.\n` +
@@ -599,7 +598,7 @@ async function Iris() {
                     } catch (mediaError) {
                         // console.error('Error restoring media:', mediaError);
                         await client.sendMessage(targetJid, {
-                            text: `_❌ Could not restore media content_\n_Media Type: ${messageType}_\n_This media may have expired or been corrupted_`
+                            text: `_ Could not restore media content_\n_Media Type: ${messageType}_\n_This media may have expired or been corrupted_`
                         });
                     }
                 }

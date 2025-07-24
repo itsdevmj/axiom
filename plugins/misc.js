@@ -71,7 +71,6 @@ uptime: ${bb}
         // Remove @image from the text
         responseText = responseText.replace(/@image/gi, "").trim();
 
-        // Default bot image URL (you can change this to your preferred image)
         const defaultImageUrl = "https://i.imgur.com/your-bot-image.jpg";
 
         try {
@@ -80,7 +79,7 @@ uptime: ${bb}
                 message.jid,
                 {
                     image: imageBuffer,
-                    caption: responseText || `Hello ${message.pushName}! 👋\nBot is alive and running! ✅`
+                    caption: responseText || `Hello ${message.pushName}! 👋\nBot is alive and running! `
                 },
                 { quoted: message }
             );

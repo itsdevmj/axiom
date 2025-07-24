@@ -299,9 +299,9 @@ command({
         const jid = number + '@s.whatsapp.net';
 
         await message.add([jid]);
-        await message.reply(`_✅ Added ${number} to the group_`);
+        await message.reply(`_ Added ${number} to the group_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to add user: ${error.message}_`);
+        await message.reply(`_ Failed to add user: ${error.message}_`);
     }
 });
 
@@ -333,9 +333,9 @@ command({
 
     try {
         await message.kick([targetJid]);
-        await message.reply(`_✅ Removed user from the group_`);
+        await message.reply(`_ Removed user from the group_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to remove user: ${error.message}_`);
+        await message.reply(`_ Failed to remove user: ${error.message}_`);
     }
 });
 
@@ -367,9 +367,9 @@ command({
 
     try {
         await message.promote([targetJid]);
-        await message.reply(`_✅ Promoted user to admin_`);
+        await message.reply(`_ Promoted user to admin_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to promote user: ${error.message}_`);
+        await message.reply(`_ Failed to promote user: ${error.message}_`);
     }
 });
 
@@ -401,9 +401,9 @@ command({
 
     try {
         await message.demote([targetJid]);
-        await message.reply(`_✅ Demoted user to member_`);
+        await message.reply(`_ Demoted user to member_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to demote user: ${error.message}_`);
+        await message.reply(`_ Failed to demote user: ${error.message}_`);
     }
 });
 
@@ -424,9 +424,9 @@ command({
 
     try {
         await message.client.groupSettingUpdate(message.jid, 'announcement');
-        await message.reply('_✅ Group muted - Only admins can send messages_');
+        await message.reply('_ Group muted - Only admins can send messages_');
     } catch (error) {
-        await message.reply(`_❌ Failed to mute group: ${error.message}_`);
+        await message.reply(`_ Failed to mute group: ${error.message}_`);
     }
 });
 
@@ -447,9 +447,9 @@ command({
 
     try {
         await message.client.groupSettingUpdate(message.jid, 'not_announcement');
-        await message.reply('_✅ Group unmuted - Everyone can send messages_');
+        await message.reply('_ Group unmuted - Everyone can send messages_');
     } catch (error) {
-        await message.reply(`_❌ Failed to unmute group: ${error.message}_`);
+        await message.reply(`_ Failed to unmute group: ${error.message}_`);
     }
 });
 
@@ -472,7 +472,7 @@ command({
         await message.client.groupSettingUpdate(message.jid, 'locked');
         await message.reply('_🔒 Group settings locked - Only admins can edit group info_');
     } catch (error) {
-        await message.reply(`_❌ Failed to lock group: ${error.message}_`);
+        await message.reply(`_ Failed to lock group: ${error.message}_`);
     }
 });
 
@@ -492,9 +492,9 @@ command({
     if (!isUserAdmin) return await message.reply('_You are not an admin_');
     try {
         await message.client.groupSettingUpdate(message.jid, 'unlocked');
-        await message.reply('_🔓 Group settings unlocked - Everyone can edit group info_');
+        await message.reply('_Group settings unlocked - Everyone can edit group info_');
     } catch (error) {
-        await message.reply(`_❌ Failed to unlock group: ${error.message}_`);
+        await message.reply(`_ Failed to unlock group: ${error.message}_`);
     }
 });
 
@@ -510,7 +510,7 @@ command({
     try {
         const groupMetadata = await message.client.groupMetadata(message.jid);
 
-        let groupInfo = `*📋 Group Information*\n\n`;
+        let groupInfo = `*Group Information*\n\n`;
         groupInfo += `*Name:* ${groupMetadata.subject}\n`;
         groupInfo += `*Description:* ${groupMetadata.desc || 'No description'}\n`;
         groupInfo += `*Created:* ${new Date(groupMetadata.creation * 1000).toDateString()}\n`;
@@ -528,7 +528,7 @@ command({
 
         await message.reply(groupInfo);
     } catch (error) {
-        await message.reply(`_❌ Failed to get group info: ${error.message}_`);
+        await message.reply(`_ Failed to get group info: ${error.message}_`);
     }
 });
 
@@ -549,7 +549,7 @@ command({
             return await message.reply('_No admins found in this group_');
         }
 
-        let adminList = `*👑 Group Admins (${admins.length})*\n\n`;
+        let adminList = `*Group Admins (${admins.length})*\n\n`;
 
         for (let i = 0; i < admins.length; i++) {
             const admin = admins[i];
@@ -559,7 +559,7 @@ command({
 
         await message.reply(adminList);
     } catch (error) {
-        await message.reply(`_❌ Failed to get admin list: ${error.message}_`);
+        await message.reply(`_ Failed to get admin list: ${error.message}_`);
     }
 });
 
@@ -576,9 +576,9 @@ command({
         const groupMetadata = await message.client.groupMetadata(message.jid);
         const participants = groupMetadata.participants.map(p => p.id);
 
-        const customMessage = match || 'Group Announcement';
+        const customMessage = match || '';
 
-        let tagMessage = `*📢 ${customMessage}*\n\n`;
+        let tagMessage = `*${customMessage}*\n\n`;
         participants.forEach((participant, index) => {
             const number = participant.split('@')[0];
             tagMessage += `${index + 1}. @${number}\n`;
@@ -589,7 +589,7 @@ command({
             mentions: participants
         });
     } catch (error) {
-        await message.reply(`_❌ Failed to tag all: ${error.message}_`);
+        await message.reply(`_ Failed to tag all: ${error.message}_`);
     }
 });
 
@@ -603,10 +603,10 @@ command({
     if (!message.isGroup) return await message.reply('_This command only works in groups_');
 
     try {
-        await message.reply('_👋 Goodbye! Leaving the group..._');
+        await message.reply('_Goodbye! Leaving the group..._');
         await message.client.groupLeave(message.jid);
     } catch (error) {
-        await message.reply(`_❌ Failed to leave group: ${error.message}_`);
+        await message.reply(`_ Failed to leave group: ${error.message}_`);
     }
 });
 
@@ -629,9 +629,9 @@ command({
 
     try {
         await message.client.groupUpdateSubject(message.jid, match);
-        await message.reply(`_✅ Group name changed to: ${match}_`);
+        await message.reply(`_ Group name changed to: ${match}_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to change group name: ${error.message}_`);
+        await message.reply(`_ Failed to change group name: ${error.message}_`);
     }
 });
 
@@ -654,9 +654,9 @@ command({
 
     try {
         await message.client.groupUpdateDescription(message.jid, match);
-        await message.reply(`_✅ Group description updated_`);
+        await message.reply(`_ Group description updated_`);
     } catch (error) {
-        await message.reply(`_❌ Failed to change group description: ${error.message}_`);
+        await message.reply(`_ Failed to change group description: ${error.message}_`);
     }
 });
 
@@ -681,7 +681,7 @@ command({
 
         await message.reply(`*🔗 Group Invite Link*\n\n${inviteLink}`);
     } catch (error) {
-        await message.reply(`_❌ Failed to get invite link: ${error.message}_`);
+        await message.reply(`_ Failed to get invite link: ${error.message}_`);
     }
 });
 
@@ -702,13 +702,11 @@ command({
 
     try {
         await message.client.groupRevokeInvite(message.jid);
-        await message.reply('_✅ Group invite link revoked - Old links are now invalid_');
+        await message.reply('_ Group invite link revoked - Old links are now invalid_');
     } catch (error) {
-        await message.reply(`_❌ Failed to revoke invite link: ${error.message}_`);
+        await message.reply(`_ Failed to revoke invite link: ${error.message}_`);
     }
 });
-
-// GROUP PROTECTION FEATURES
 
 // Helper function to detect links
 function containsLink(text) {
@@ -722,6 +720,7 @@ function containsBannedWords(text, bannedWords) {
     const lowerText = text.toLowerCase();
     return bannedWords.some(word => lowerText.includes(word.toLowerCase()));
 }
+
 
 // Helper function to perform actions with warning system
 async function performAction(message, action, reason) {

