@@ -7,7 +7,7 @@ if (fs.existsSync('config.env')) {
     });
 }
 
-const initialSudo = process.env.SUDO ? process.env.SUDO.split(',') : ['2348142304526'];
+const initialSudo = process.env.SUDO ? process.env.SUDO.split(',') : [];
 
 global.config = {
   ANTILINK: process.env.ANTI_LINK === 'true' || false,

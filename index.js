@@ -370,10 +370,6 @@ async function Iris() {
 
             const mode = activeSettings.mode;
 
-            // Create deleted message info
-            const deletedTime = new Date().toLocaleString();
-            const originalTime = new Date(timestamp).toLocaleString();
-
             // Determine message type and content
             const messageType = msg.type;
             let messageContent = msg.body || '';
@@ -422,40 +418,53 @@ async function Iris() {
                 const senderName = msg.pushName || 'Unknown';
                 const messageText = messageContent || mediaCaption || '';
 
-                // Create the forwarded message format that looks like WhatsApp forwarded messages
-                const forwardedMessage = {
-                    text: messageText || 'Media message',
-                    contextInfo: {
-                        isForwarded: true,
-                        forwardingScore: 1,
-                        forwardedNewsletterMessageInfo: {
-                            // newsletterJid: "120363144038483540@newsletter",
-                            // newsletterName: "deletedMessage",
-                            serverMessageId: 1
-                        },
-                        quotedMessage: {
-                            conversation: `${senderNumber}\n${messageText || 'Media message'}`
-                        },
-                        participant: msg.sender,
-                        remoteJid: msg.from,
-                        mentionedJid: [],
-                        externalAdReply: {
-                            title: 'Deleted Mesaage',
-                            body: messageText || 'Media message',
-                            mediaType: 1,
-                            // sourceUrl: "https://wa.me/" + msg.sender.split('@')[0],
-                            // thumbnailUrl: "https://i.imgur.com/4F8MT6p.png",
-                            renderLargerThumbnail: false,
-                            showAdAttribution: false,
-                            previewType: "NONE"
+                // Check if it's a status message
+                const isStatusMessage = msg.from === 'status@broadcast' || msg.sender === 'status@broadcast';
+                
+                // Check if it's a media message or text message
+                const isMediaMessage = rawMessage.message && messageType !== 'conversation' && messageType !== 'extendedTextMessage';
+
+                // Create appropriate title and body based on message source
+                const messageTitle = isStatusMessage ? 'Deleted Status Update' : 'Deleted Message';
+                const messageBody = isStatusMessage 
+                    ? `${senderName}` 
+                    : messageText || 'Deleted message';
+                
+                // Create conversation text for quoted message
+                const conversationText = isStatusMessage 
+                    ? `Status Update\n${senderNumber}\n${messageText || 'Media status'}`
+                    : `${senderNumber}\n${messageText || 'Deleted message'}`;
+
+                // For text messages, send the forwarded text message
+                if (!isMediaMessage) {
+                    const forwardedMessage = {
+                        text: messageText || (isStatusMessage ? 'Deleted status' : 'Deleted message'),
+                        contextInfo: {
+                            isForwarded: true,
+                            forwardingScore: 1,
+                            forwardedNewsletterMessageInfo: {
+                                serverMessageId: 1
+                            },
+                            quotedMessage: {
+                                conversation: conversationText
+                            },
+                            participant: msg.sender,
+                            remoteJid: msg.from,
+                            mentionedJid: [],
+                            externalAdReply: {
+                                title: messageTitle,
+                                body: messageBody,
+                                mediaType: 1,
+                                renderLargerThumbnail: false,
+                                showAdAttribution: false,
+                                previewType: "NONE"
+                            }
                         }
-                    }
-                };
+                    };
+                    await client.sendMessage(targetJid, forwardedMessage);
+                }
 
-                // Send the forwarded-style message
-                await client.sendMessage(targetJid, forwardedMessage);
-
-                // Then try to restore the actual media if it's a media message
+                // For media messages, try to restore the actual media with forwarded context
                 if (rawMessage.message && messageType !== 'conversation' && messageType !== 'extendedTextMessage') {
                     try {
                         // console.log('Attempting to restore media, type:', messageType);
@@ -471,23 +480,47 @@ async function Iris() {
                             // console.log('Could not download media buffer:', downloadError.message);
                         }
 
-                        // If we have the media buffer, send it properly
+                        // If we have the media buffer, send it with forwarded message context
                         if (mediaBuffer && Buffer.isBuffer(mediaBuffer)) {
-                            const restorationNote = `\n\n_🔄 Restored by Anti-Delete_`;
+                            // Create forwarded message context for media
+                            const forwardedContext = {
+                                isForwarded: true,
+                                forwardingScore: 1,
+                                forwardedNewsletterMessageInfo: {
+                                    serverMessageId: 1
+                                },
+                                quotedMessage: {
+                                    conversation: conversationText
+                                },
+                                participant: msg.sender,
+                                remoteJid: msg.from,
+                                mentionedJid: [],
+                                externalAdReply: {
+                                    title: messageTitle,
+                                    body: messageBody,
+                                    mediaType: 1,
+                                    renderLargerThumbnail: false,
+                                    showAdAttribution: false,
+                                    previewType: "NONE"
+                                }
+                            };
+
                             let mediaOptions = {};
 
                             switch (messageType) {
                                 case 'imageMessage':
                                     mediaOptions = {
                                         image: mediaBuffer,
-                                        caption: (mediaCaption || '') + restorationNote
+                                        caption: (mediaCaption || ''),
+                                        contextInfo: forwardedContext
                                     };
                                     break;
 
                                 case 'videoMessage':
                                     mediaOptions = {
                                         video: mediaBuffer,
-                                        caption: (mediaCaption || '') + restorationNote
+                                        caption: (mediaCaption || ''),
+                                        contextInfo: forwardedContext
                                     };
                                     break;
 
@@ -496,7 +529,8 @@ async function Iris() {
                                     mediaOptions = {
                                         audio: mediaBuffer,
                                         mimetype: rawMessage.message.audioMessage?.mimetype || 'audio/ogg; codecs=opus',
-                                        ptt: isVoiceNote
+                                        ptt: isVoiceNote,
+                                        contextInfo: forwardedContext
                                     };
                                     break;
 
@@ -505,13 +539,15 @@ async function Iris() {
                                         document: mediaBuffer,
                                         mimetype: rawMessage.message.documentMessage?.mimetype || 'application/octet-stream',
                                         fileName: rawMessage.message.documentMessage?.fileName || 'document',
-                                        caption: (mediaCaption || '') + restorationNote
+                                        caption: (mediaCaption || ''),
+                                        contextInfo: forwardedContext
                                     };
                                     break;
 
                                 case 'stickerMessage':
                                     mediaOptions = {
-                                        sticker: mediaBuffer
+                                        sticker: mediaBuffer,
+                                        contextInfo: forwardedContext
                                     };
                                     break;
 
@@ -523,23 +559,11 @@ async function Iris() {
                             await client.sendMessage(targetJid, mediaOptions);
                             // console.log('Successfully restored media using buffer, type:', messageType);
 
-                            // Send context message for media without captions
-                            if (messageType === 'stickerMessage') {
-                                await client.sendMessage(targetJid, {
-                                    text: `_Sticker restored by Anti-Delete_`
-                                });
-                            } else if (messageType === 'audioMessage') {
-                                const isVoiceNote = rawMessage.message.audioMessage?.ptt;
-                                await client.sendMessage(targetJid, {
-                                    text: `_${isVoiceNote ? 'Voice note' : 'Audio'} restored by Anti-Delete_`
-                                });
-                            }
-
                         } else {
                             // Fallback: Media buffer not available, send detailed info instead
                             console.log('No media buffer available, sending detailed media info');
 
-                            let mediaInfo = `_📎 Media content could not be restored_\n\n`;
+                            let mediaInfo = `_Media content could not be restored_\n\n`;
                             mediaInfo += `*Media Type:* ${messageType.replace('Message', '')}\n`;
 
                             if (rawMessage.message) {
