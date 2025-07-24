@@ -8,16 +8,14 @@ if (fs.existsSync('config.env')) {
 }
 
 const initialSudo = process.env.SUDO ? process.env.SUDO.split(',') : [];
-// Add your numbers as sudo users
-if (!initialSudo.includes('68848845881500')) initialSudo.push('68848845881500');
-if (!initialSudo.includes('182119884152917')) initialSudo.push('182119884152917');
 
+// Add your numbers as sudo users
 global.config = {
   ANTILINK: process.env.ANTI_LINK === 'true' || false,
   ALWAYS_ONLINE: process.env.ALWAYS_ONLINE === 'true' || false,
   LOGS: process.env.LOGS === 'true' || true,
   ANTILINK_ACTION: process.env.ANTI_LINK || 'kick',
-  SESSION_ID: process.env.SESSION_ID || '936205dd8e58d86b61f9aeb0083c8ebf',
+  SESSION_ID: process.env.SESSION_ID || '',
   PORT: process.env.PORT || 8000,
   HANDLERS: process.env.HANDLER || '.',
   BRANCH: 'master',
