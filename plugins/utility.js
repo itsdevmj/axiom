@@ -685,21 +685,30 @@ function writeAntiDeleteDB(data) {
     setAntidelete(data);
 }
 
-function getUserSettings(userId) {
+function getGlobalSettings() {
     const db = readAntiDeleteDB();
-    if (!db.users) db.users = {};
-    return db.users[userId] || {
+    return db.global || {
         enabled: false,
         mode: 'dm', // 'dm', 'jid', 'restore'
         targetJid: null
     };
 }
 
-function setUserSettings(userId, settings) {
+function setGlobalSettings(settings) {
     const db = readAntiDeleteDB();
-    if (!db.users) db.users = {};
-    db.users[userId] = { ...getUserSettings(userId), ...settings };
+    db.global = { ...getGlobalSettings(), ...settings };
+    // Clear old user-specific settings to avoid confusion
+    db.users = {};
     writeAntiDeleteDB(db);
+}
+
+// Legacy function for backward compatibility
+function getUserSettings(userId) {
+    return getGlobalSettings();
+}
+
+function setUserSettings(userId, settings) {
+    setGlobalSettings(settings);
 }
 
 function getGroupSettings(groupId) {

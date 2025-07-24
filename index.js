@@ -24,7 +24,7 @@ global.cache = {
 // Helper functions for welcome/goodbye messages
 async function processWelcomeGoodbyeMessage(text, participant, groupMetadata) {
     if (!text) return null;
-    
+
     const userName = 'User'; // Default name since we don't have user info in participant update
     const userNumber = participant.split('@')[0];
     const groupName = groupMetadata.subject || 'Group';
@@ -32,7 +32,7 @@ async function processWelcomeGoodbyeMessage(text, participant, groupMetadata) {
     const memberCount = groupMetadata.participants.length;
     const currentTime = new Date().toLocaleString();
     const currentDate = new Date().toLocaleDateString();
-    
+
     return text
         .replace(/@user/gi, userName)
         .replace(/@name/gi, userName)
@@ -52,7 +52,7 @@ async function handleWelcomeMessage(conn, groupId, participant, groupMetadata, s
         const { getBuffer } = require("./lib/functions");
         const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
         if (!processedText) return;
-        
+
         if (settings.type === 'image' && settings.imageUrl) {
             const imageBuffer = await getBuffer(settings.imageUrl);
             await conn.sendMessage(groupId, {
@@ -96,7 +96,7 @@ async function handleGoodbyeMessage(conn, groupId, participant, groupMetadata, s
         const { getBuffer } = require("./lib/functions");
         const processedText = await processWelcomeGoodbyeMessage(settings.message, participant, groupMetadata);
         if (!processedText) return;
-        
+
         if (settings.type === 'image' && settings.imageUrl) {
             const imageBuffer = await getBuffer(settings.imageUrl);
             await conn.sendMessage(groupId, {
@@ -284,7 +284,7 @@ async function Iris() {
             }
 
             const { message: msg, timestamp, rawMessage } = storedMessage;
-            
+
             // Log what type of message was deleted
             if (msg.from === 'status@broadcast' || msg.sender === 'status@broadcast') {
                 console.log('Detected status update deletion');
@@ -299,17 +299,64 @@ async function Iris() {
             }
 
             // Check all sudo users to see if any have anti-delete enabled
+            // Get current sudo list from database to ensure we have the latest
+            const currentSudoList = global.PluginDB ? global.PluginDB.getSudoList() : global.config.SUDO;
             let activeSettings = null;
             let sudoUserWithAntiDelete = null;
 
-            for (const sudoNumber of global.config.SUDO) {
+            // First, check if any sudo user has anti-delete enabled
+            let hasAnyEnabledSettings = false;
+            let fallbackSettings = null;
+
+            for (const sudoNumber of currentSudoList) {
                 const sudoJid = sudoNumber + '@s.whatsapp.net';
-                const userSettings = global.antiDeleteDB.getUserSettings(sudoJid);
-                
+                let userSettings = global.antiDeleteDB.getUserSettings(sudoJid);
+
+                // If no settings found, also check for device-specific JIDs (e.g., number:deviceId@s.whatsapp.net)
+                if (!userSettings.enabled) {
+                    const antiDeleteDB = global.antiDeleteDB.readAntiDeleteDB ? global.antiDeleteDB.readAntiDeleteDB() : global.PluginDB.getAntidelete();
+                    if (antiDeleteDB.users) {
+                        // Look for any JID that starts with the sudo number
+                        for (const [jid, settings] of Object.entries(antiDeleteDB.users)) {
+                            if (jid.startsWith(sudoNumber + ':') || jid.startsWith(sudoNumber + '@')) {
+                                if (settings.enabled) {
+                                    userSettings = settings;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (userSettings.enabled) {
                     activeSettings = userSettings;
                     sudoUserWithAntiDelete = sudoJid;
+                    hasAnyEnabledSettings = true;
                     break; // Use the first enabled sudo user's settings
+                }
+            }
+
+            // If no current sudo user has anti-delete enabled, check if any previous sudo user had it enabled
+            // and automatically enable it for the current sudo users
+            if (!hasAnyEnabledSettings) {
+                const antiDeleteDB = global.antiDeleteDB.readAntiDeleteDB ? global.antiDeleteDB.readAntiDeleteDB() : global.PluginDB.getAntidelete();
+                if (antiDeleteDB.users) {
+                    // Look for any previously enabled anti-delete settings
+                    for (const [jid, settings] of Object.entries(antiDeleteDB.users)) {
+                        if (settings.enabled) {
+                            fallbackSettings = settings;
+                            break;
+                        }
+                    }
+                }
+
+                // If we found previous settings, apply them to the first current sudo user
+                if (fallbackSettings && currentSudoList.length > 0) {
+                    const firstSudoJid = currentSudoList[0] + '@s.whatsapp.net';
+                    global.antiDeleteDB.setUserSettings(firstSudoJid, fallbackSettings);
+                    activeSettings = fallbackSettings;
+                    sudoUserWithAntiDelete = firstSudoJid;
+                    console.log(`Auto-enabled anti-delete for new sudo user: ${currentSudoList[0]}`);
                 }
             }
 
@@ -345,7 +392,7 @@ async function Iris() {
 
             try {
                 let targetJid;
-                
+
                 switch (mode) {
                     case 'dm':
                         // Send to the sudo user who has anti-delete enabled
@@ -367,7 +414,7 @@ async function Iris() {
                     console.log('No target JID available');
                     return;
                 }
-                
+
                 // console.log('Sending deleted message to:', targetJid, 'Mode:', mode);
 
                 // Create forwarded message style for deleted message
@@ -582,21 +629,21 @@ async function Iris() {
             try {
                 const metadata = await conn.groupMetadata(event.id);
                 global.cache.groups.set(event.id, metadata);
-                
+
                 // Handle welcome/goodbye messages
                 console.log('Group participant update:', {
                     groupId: event.id,
                     action: event.action,
                     participants: event.participants
                 });
-                
+
                 if (global.PluginDB) {
                     const { getWelcome, getGoodbye } = global.PluginDB;
                     const welcome = getWelcome();
                     const goodbye = getGoodbye();
                     const welcomeSettings = welcome[event.id];
                     const goodbyeSettings = goodbye[event.id];
-                    
+
                     // Handle new members (welcome)
                     if (event.action === 'add' && welcomeSettings && welcomeSettings.enabled) {
                         for (const participant of event.participants) {
@@ -607,7 +654,7 @@ async function Iris() {
                             }
                         }
                     }
-                    
+
                     // Handle members leaving (goodbye)
                     if (event.action === 'remove' && goodbyeSettings && goodbyeSettings.enabled) {
                         for (const participant of event.participants) {
@@ -636,34 +683,34 @@ async function Iris() {
                 const features = global.PluginDB.getBotFeatures();
                 const jid = msg.key && msg.key.remoteJid;
                 if (jid && !jid.endsWith("@broadcast")) {
-                  if (features.alwaysOnline) {
-                    try {
-                      await conn.sendPresenceUpdate("available", jid);
-                    } catch (e) {}
-                  } else if (features.autoType) {
-                    try {
-                      await conn.sendPresenceUpdate("composing", jid);
-                      setTimeout(() => {
-                        conn.sendPresenceUpdate("paused", jid);
-                      }, 3000);
-                    } catch (e) {}
-                  } else if (features.autoRecord) {
-                    try {
-                      await conn.sendPresenceUpdate("recording", jid);
-                      setTimeout(() => {
-                        conn.sendPresenceUpdate("paused", jid);
-                      }, 3000);
-                    } catch (e) {}
-                  }
+                    if (features.alwaysOnline) {
+                        try {
+                            await conn.sendPresenceUpdate("available", jid);
+                        } catch (e) { }
+                    } else if (features.autoType) {
+                        try {
+                            await conn.sendPresenceUpdate("composing", jid);
+                            setTimeout(() => {
+                                conn.sendPresenceUpdate("paused", jid);
+                            }, 3000);
+                        } catch (e) { }
+                    } else if (features.autoRecord) {
+                        try {
+                            await conn.sendPresenceUpdate("recording", jid);
+                            setTimeout(() => {
+                                conn.sendPresenceUpdate("paused", jid);
+                            }, 3000);
+                        } catch (e) { }
+                    }
                 }
                 // --- End bot features logic ---
 
                 // --- Auto-view status logic ---
                 let autoViewStatusEnabled = features.autoViewStatus || global.config.AUTO_VIEW_STATUS;
                 if (msg.key && msg.key.remoteJid === 'status@broadcast' && autoViewStatusEnabled) {
-                  try {
-                    await conn.readMessages([msg.key]);
-                  } catch (e) {}
+                    try {
+                        await conn.readMessages([msg.key]);
+                    } catch (e) { }
                 }
                 // --- End auto-view status logic ---
 
