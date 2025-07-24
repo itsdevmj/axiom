@@ -576,7 +576,7 @@ ${responseTime < 200 ? 'Status: All systems operational' : 'Status: System under
 
 // View once decryptor
 command({
-    pattern: "vo",
+    pattern: "vv",
     fromMe: true,
     desc: "Decrypt view once messages",
     type: "user"
@@ -584,7 +584,7 @@ command({
     try {
         // Check if user replied to a message
         if (!message.reply_message) {
-            return await message.reply('_Reply to a view once message to decrypt it_\nExample: Reply to view once photo/video and type `.vo`');
+            return await message.reply('_Reply to a view once message to decrypt it_\nExample: Reply to view once photo/video and type `.vv`');
         }
 
         const quotedMessage = message.reply_message;

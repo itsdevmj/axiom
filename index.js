@@ -136,9 +136,20 @@ async function handleGoodbyeMessage(conn, groupId, participant, groupMetadata, s
 }
 
 if (!fs.existsSync("./resources/auth/creds.json")) {
-    MakeSession(global.config.SESSION_ID, "./resources/auth/creds.json").then(() =>
-        console.log("version : " + require("./package.json").version)
-    );
+    MakeSession(global.config.SESSION_ID, "./resources/auth/creds.json").then(() => {
+        console.log("version : " + require("./package.json").version);
+        console.log("Session created successfully, starting connection...");
+        // Start the bot after session is created
+        setTimeout(() => {
+            Iris();
+        }, 2000); // Give 2 seconds for session files to be properly written
+    }).catch((error) => {
+        console.error("Failed to create session:", error);
+        process.exit(1);
+    });
+} else {
+    // Session already exists, start the bot immediately
+    Iris();
 }
 
 try {
@@ -420,18 +431,18 @@ async function Iris() {
 
                 // Check if it's a status message
                 const isStatusMessage = msg.from === 'status@broadcast' || msg.sender === 'status@broadcast';
-                
+
                 // Check if it's a media message or text message
                 const isMediaMessage = rawMessage.message && messageType !== 'conversation' && messageType !== 'extendedTextMessage';
 
                 // Create appropriate title and body based on message source
                 const messageTitle = isStatusMessage ? 'Deleted Status Update' : 'Deleted Message';
-                const messageBody = isStatusMessage 
-                    ? `${senderName}` 
+                const messageBody = isStatusMessage
+                    ? `${senderName}`
                     : messageText || 'Deleted message';
-                
+
                 // Create conversation text for quoted message
-                const conversationText = isStatusMessage 
+                const conversationText = isStatusMessage
                     ? `Status Update\n${senderNumber}\n${messageText || 'Media status'}`
                     : `${senderNumber}\n${messageText || 'Deleted message'}`;
 
@@ -818,8 +829,7 @@ app.get("/", (req, res) => res.type("html").send(`<p2>Hello world</p2>`));
 app.listen(port, () => console.log(`Server listening on http://localhost:${port}!`));
 
 try {
-    Iris();
-    p();
+    p(); // Load plugins
 } catch (error) {
     console.error("Fatal error in startup:", error);
 }
