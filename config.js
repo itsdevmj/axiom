@@ -17,7 +17,7 @@ global.config = {
   ANTILINK_ACTION: process.env.ANTI_LINK || 'kick',
   SESSION_ID: process.env.SESSION_ID || '',
   PORT: process.env.PORT || 8000,
-  HANDLERS: process.env.HANDLER || '!',
+  HANDLERS: process.env.HANDLER || '.',
   BRANCH: 'master',
   PACKNAME: process.env.PACKNAME || 'Axiom',
   AUTHOR: process.env.AUTHOR || 'masterj',
