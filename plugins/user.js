@@ -4,7 +4,49 @@ const { getDevice } = require("@whiskeysockets/baileys");
 const fs = require('fs');
 const path = require('path');
 const sudoPath = path.join(__dirname, '../resources/database/sudo.json');
+const configEnvPath = path.join(__dirname, '../config.env');
 const { getSudoList, setSudoList } = global.PluginDB;
+
+// Function to update environment file
+function updateEnvFile(key, value) {
+    try {
+        let envContent = '';
+        
+        // Read existing config.env if it exists
+        if (fs.existsSync(configEnvPath)) {
+            envContent = fs.readFileSync(configEnvPath, 'utf8');
+        }
+        
+        // Split into lines
+        let lines = envContent.split('\n');
+        let keyFound = false;
+        
+        // Update existing key or add new one
+        lines = lines.map(line => {
+            if (line.startsWith(`${key}=`)) {
+                keyFound = true;
+                return `${key}=${value}`;
+            }
+            return line;
+        });
+        
+        // If key wasn't found, add it
+        if (!keyFound) {
+            lines.push(`${key}=${value}`);
+        }
+        
+        // Remove empty lines at the end and write back
+        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+            lines.pop();
+        }
+        
+        fs.writeFileSync(configEnvPath, lines.join('\n') + '\n');
+        return true;
+    } catch (error) {
+        console.error('Error updating env file:', error);
+        return false;
+    }
+}
 
 function loadSudoList() {
     if (fs.existsSync(sudoPath)) {
@@ -999,6 +1041,43 @@ function featureCommand({ pattern, key, desc }) {
         }
     });
 }
+
+command(
+    {
+        pattern: "mode",
+        fromMe: true,
+        desc: "Change bot work mode (public/private)",
+        type: "user"
+    },
+    async (message, match) => {
+        const mode = match ? match.toLowerCase().trim() : '';
+
+        if (!mode) {
+            const currentMode = global.config.WORK_TYPE;
+            const prefix = global.config.HANDLERS;
+            return await message.reply(`*Current Mode:* ${currentMode}\n\n*Usage:*\n• \`${prefix}mode public\` - Anyone can use the bot\n• \`${prefix}mode private\` - Only sudo users can use the bot`);
+        }
+
+        if (mode !== 'public' && mode !== 'private') {
+            const prefix = global.config.HANDLERS;
+            return await message.reply(`*Invalid mode!*\n\nUse:\n• \`${prefix}mode public\` - Anyone can use the bot\n• \`${prefix}mode private\` - Only sudo users can use the bot`);
+        }
+
+        global.config.WORK_TYPE = mode;
+        
+        const envUpdated = updateEnvFile('WORK_TYPE', mode);
+        
+        const modeDescription = mode === 'private'
+            ? "Only sudo users can use the bot"
+            : "Anyone can use the bot";
+
+        const persistenceStatus = envUpdated 
+            ? "Setting saved" 
+            : "Setting applied temporarily (restart may reset)";
+
+        await message.reply(`*Mode changed to:* ${mode}\n*Description:* ${modeDescription}\n*Status:* ${persistenceStatus}`);
+    }
+);
 
 featureCommand({ pattern: 'online', key: 'alwaysOnline', desc: 'Always Online' });
 featureCommand({ pattern: 'type', key: 'autoType', desc: 'Auto Type' });

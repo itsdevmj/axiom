@@ -2,14 +2,6 @@ const { command } = require("../lib");
 const simpleGit = require("simple-git");
 const git = simpleGit();
 const { exec } = require("child_process");
-const {
-    ytdl,
-    getJson,
-    getBuffer,
-    isYT,
-    isInsta,
-} = require("../lib/");
-const lib = require("../lib");
 const util = require("util");
 const axios = require("axios");
 
@@ -17,35 +9,99 @@ const axios = require("axios");
 command({
     pattern: "update",
     fromMe: true,
-    desc: "Check for updates from GitHub and update the bot, including new packages",
+    desc: "Check for updates from GitHub and update the bot",
     type: "owner"
-}, async (message) => {
-    await message.reply("Checking for updates...");
+}, async (message, match) => {
+    const defaultRepo = "https://github.com/itsdevmj/axiom.git";
+    const repoUrl = match ? match.trim() : defaultRepo;
+    
+    // Validate GitHub URL format
+    if (match && !match.includes('github.com') && !match.includes('.git')) {
+        return await message.reply("Invalid repository URL. Please provide a valid GitHub repository URL.");
+    }
+
+    await message.reply(`Checking for updates...`);
+
     try {
-        await git.fetch();
-        const status = await git.status();
-        if (status.behind > 0) {
-            await message.reply("Update available. Pulling the latest changes...");
-            const pullResult = await git.pull();
-            if (pullResult.summary.changes || pullResult.summary.insertions || pullResult.summary.deletions) {
-                await message.reply("Update pulled. Installing new packages (if any)...");
-                exec("npm install", (err, stdout, stderr) => {
-                    if (err) {
-                        return message.reply(`Update pulled, but failed to install packages: ${err.message}`);
-                    }
-                    if (stderr) {
-                        return message.reply(`Update pulled. npm install stderr: ${stderr}`);
-                    }
-                    message.reply("Update completed successfully. All packages are up to date.");
-                });
-            } else {
-                await message.reply("Pull completed, but no changes were detected.");
-            }
-        } else {
-            await message.reply("The bot is already up to date.");
+        // Check if we have a remote origin, if not add it
+        const remotes = await git.getRemotes(true);
+        const originRemote = remotes.find(remote => remote.name === 'origin');
+
+        if (!originRemote) {
+            await git.addRemote('origin', repoUrl);
+            await message.reply("Remote origin added successfully.");
+        } else if (originRemote.refs.fetch !== repoUrl) {
+            await git.remote(['set-url', 'origin', repoUrl]);
+            await message.reply("Remote origin URL updated.");
         }
+
+        // Fetch from the specified repository with timeout
+        await Promise.race([
+            git.fetch('origin'),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Fetch timeout after 30 seconds')), 30000)
+            )
+        ]);
+
+        // Get current branch
+        const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
+        const branch = currentBranch.trim() || 'master';
+
+        // Compare commits to check for updates
+        const localCommit = await git.revparse(['HEAD']);
+        const remoteCommit = await git.revparse([`origin/${branch}`]);
+
+        if (localCommit === remoteCommit) {
+            return await message.reply("Bot is already up to date.");
+        }
+
+        await message.reply("Update available. Pulling latest changes...");
+
+        // Stash any local changes to prevent conflicts
+        try {
+            await git.stash();
+        } catch (stashErr) {
+            // Ignore stash errors if no changes to stash
+        }
+
+        // Pull the latest changes
+        const pullResult = await git.pull('origin', branch);
+
+        if (pullResult.summary.changes || pullResult.summary.insertions || pullResult.summary.deletions) {
+            await message.reply("Code updated successfully. Installing dependencies...");
+            
+            // Use promisified exec for better error handling
+            const execPromise = util.promisify(exec);
+            
+            try {
+                const { stdout, stderr } = await execPromise('npm install --production');
+                
+                if (stderr && !stderr.includes('npm WARN')) {
+                    await message.reply(`Dependencies installed with warnings:\n${stderr.substring(0, 500)}`);
+                } else {
+                    await message.reply("Update completed successfully. Please restart the bot to apply changes.");
+                }
+                
+            } catch (npmErr) {
+                await message.reply(`Code updated but dependency installation failed:\n${npmErr.message.substring(0, 500)}\n\nPlease run 'npm install' manually.`);
+            }
+            
+        } else {
+            await message.reply("Pull completed but no file changes detected.");
+        }
+
     } catch (err) {
-        await message.reply(`An error occurred during the update process: ${err.message}`);
+        console.error('Update error:', err);
+        
+        if (err.message.includes('timeout')) {
+            await message.reply("Update failed: Connection timeout. Please check your internet connection and try again.");
+        } else if (err.message.includes('not found') || err.message.includes('does not exist')) {
+            await message.reply("Update failed: Repository not found. Please check the repository URL.");
+        } else if (err.message.includes('permission denied') || err.message.includes('authentication')) {
+            await message.reply("Update failed: Access denied. Please check repository permissions.");
+        } else {
+            await message.reply(`Update failed: ${err.message.substring(0, 300)}\n\nTry: .update ${defaultRepo}`);
+        }
     }
 });
 

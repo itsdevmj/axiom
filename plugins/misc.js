@@ -27,7 +27,7 @@ command({
 }, async (message, m, match) => {
     // Extract custom message from message text
     let messageText = message.text || "";
-    let prefix = message.prefix || ".";
+    let prefix = global.config.HANDLERS;
     let customMessage = messageText.replace(new RegExp(`^\\${prefix}alive\\s*`, "i"), "").trim();
 
     // If user provided a custom message, save it to database
@@ -91,35 +91,4 @@ uptime: ${bb}
 
     // Send the processed message
     return message.reply(responseText);
-});
-
-// Command to reset alive message to default
-command({
-    pattern: "setalive ?(.*)",
-    fromMe: true,
-    type: "misc",
-    desc: "Set custom alive message or reset to default (use 'reset' to restore default)"
-}, async (message, m, match) => {
-    let messageText = message.text || "";
-    let prefix = message.prefix || ".";
-    let customMessage = messageText.replace(new RegExp(`^\\${prefix}setalive\\s*`, "i"), "").trim();
-
-    if (!customMessage) {
-        return message.reply("_Please provide a custom alive message or use 'reset' to restore default._\n\nExample:\n`.setalive Hello @name! @bot is online!`\n`.setalive reset`");
-    }
-
-    if (customMessage.toLowerCase() === "reset") {
-        setAliveMessage({
-            custom: false,
-            message: ""
-        });
-        return message.reply("_Alive message has been reset to default!_");
-    }
-
-    setAliveMessage({
-        custom: true,
-        message: customMessage
-    });
-
-    return message.reply(`_Custom alive message set successfully!_\n\nYour message: ${customMessage}\n\n_Available prefixes: @name, @uptime, @owner, @bot, @image_`);
 });

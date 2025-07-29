@@ -1,15 +1,11 @@
 {
   "name": "axiom",
-  "version": "2.0.0",
+  "version": "3.2.1",
   "description": "void",
   "main": "index.js",
   "scripts": {
-    "start": "pm2 start . --attach --name iris",
+    "start": "pm2 start . --attach --name axiom",
     "stop": "pm2 stop iris"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TSH3PH4NG/Iris-md.git"
   },
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",

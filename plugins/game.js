@@ -38,40 +38,10 @@ async function isValidWord(word) {
     }
 }
 
-// Function to get word suggestions starting with a letter (for hints)
-async function getWordSuggestions(letter, count = 5) {
-    try {
-        const response = await fetch(`https://api.datamuse.com/words?sp=${letter.toLowerCase()}*&max=${count}`);
-        const data = await response.json();
-        return data.map(item => item.word.toUpperCase());
-    } catch (error) {
-        console.log('Error getting word suggestions:', error);
-        return [];
-    }
-}
 
 // Helper functions
 function generateGameId() {
     return Date.now().toString() + Math.random().toString(36).substr(2, 5);
-}
-
-// Get starting words for different difficulty levels
-function getStartingWord(level) {
-    const startingWords = {
-        1: ['CAT', 'DOG', 'SUN', 'BOOK', 'GAME'],
-        2: ['HOUSE', 'PHONE', 'MUSIC', 'HAPPY', 'LIGHT'],
-        3: ['COMPUTER', 'RAINBOW', 'FREEDOM', 'JOURNEY', 'MYSTERY'],
-        4: ['BEAUTIFUL', 'ADVENTURE', 'WONDERFUL', 'CHOCOLATE', 'BUTTERFLY'],
-        5: ['EXTRAORDINARY', 'MAGNIFICENT', 'REVOLUTIONARY', 'SOPHISTICATED', 'TRANSFORMATION']
-    };
-
-    const words = startingWords[level] || startingWords[1];
-    return words[Math.floor(Math.random() * words.length)];
-}
-
-// Calculate words required based on level
-function getWordsRequired(level) {
-    return Math.min(level, 5); // Max 5 words per turn
 }
 
 // Start Word Chain Game
@@ -151,46 +121,6 @@ async function checkWaitingTimeout(message, gameData) {
     await startGame(message, currentGame);
 }
 
-// Join game
-command({
-    pattern: 'join',
-    fromMe: false,
-    desc: 'Join active word game',
-    type: 'game'
-}, async (message, match) => {
-    const chatId = message.jid;
-    const games = getWordGame();
-    const game = games[chatId];
-
-    if (!game) {
-        return await message.reply('No active word game found. Start one with .wcg');
-    }
-
-    if (game.status === 'active') {
-        return await message.reply('Game already started! Wait for the next game.');
-    }
-
-    // Check if player already joined
-    const existingPlayer = game.players.find(p => p.id === message.participant);
-    if (existingPlayer) {
-        return await message.reply('You are already in the game!');
-    }
-
-    // Add player to game
-    game.players.push({
-        id: message.participant,
-        name: message.pushName || 'Player',
-        eliminated: false
-    });
-
-    game.lastActivity = Date.now();
-    setWordGame(chatId, game);
-
-    const playerList = game.players.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
-    const timeLeft = Math.max(0, 60 - Math.floor((Date.now() - game.waitStartTime) / 1000));
-
-    await message.reply(`*${message.pushName || 'Player'} joined the game!*\n\n*Current Players (${game.players.length}):*\n${playerList}\n\nTime left: ${timeLeft}s\n${game.players.length >= 2 ? 'Game will start automatically when timer ends!' : 'Waiting for more players... (minimum 2)'}`);
-});
 
 // Start the game
 async function startGame(message, game) {
@@ -347,6 +277,7 @@ command({
 command({
     pattern: 'wcg status',
     fromMe: false,
+    dontAddCommandList:true,
     desc: 'Show current game status',
     type: 'game'
 }, async (message, match) => {
@@ -516,6 +447,7 @@ command({
 command({
     pattern: 'wcg cleanup',
     fromMe: true,
+    dontAddCommandList: true,
     desc: 'Clean up inactive word games (Owner only)',
     type: 'game'
 }, async (message, match) => {

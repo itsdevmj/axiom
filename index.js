@@ -634,7 +634,7 @@ async function Iris() {
             }
         });
 
-        // Also listen for message deletions via different event
+
         conn.ev.on("messages.delete", async (deletedMessages) => {
             try {
                 console.log('Messages delete event:', deletedMessages);
@@ -664,7 +664,7 @@ async function Iris() {
                 const metadata = await conn.groupMetadata(event.id);
                 global.cache.groups.set(event.id, metadata);
 
-                // Handle welcome/goodbye messages
+
                 console.log('Group participant update:', {
                     groupId: event.id,
                     action: event.action,
@@ -678,7 +678,6 @@ async function Iris() {
                     const welcomeSettings = welcome[event.id];
                     const goodbyeSettings = goodbye[event.id];
 
-                    // Handle new members (welcome)
                     if (event.action === 'add' && welcomeSettings && welcomeSettings.enabled) {
                         for (const participant of event.participants) {
                             try {
@@ -689,7 +688,7 @@ async function Iris() {
                         }
                     }
 
-                    // Handle members leaving (goodbye)
+
                     if (event.action === 'remove' && goodbyeSettings && goodbyeSettings.enabled) {
                         for (const participant of event.participants) {
                             try {
@@ -713,7 +712,7 @@ async function Iris() {
                 let msg = await serialize(JSON.parse(JSON.stringify(m.messages[0])), conn);
                 if (!msg) return;
 
-                // --- Bot features logic ---
+
                 const features = global.PluginDB.getBotFeatures();
                 const jid = msg.key && msg.key.remoteJid;
                 if (jid && !jid.endsWith("@broadcast")) {
@@ -737,18 +736,15 @@ async function Iris() {
                         } catch (e) { }
                     }
                 }
-                // --- End bot features logic ---
 
-                // --- Auto-view status logic ---
+
                 let autoViewStatusEnabled = features.autoViewStatus || global.config.AUTO_VIEW_STATUS;
                 if (msg.key && msg.key.remoteJid === 'status@broadcast' && autoViewStatusEnabled) {
                     try {
                         await conn.readMessages([msg.key]);
                     } catch (e) { }
                 }
-                // --- End auto-view status logic ---
 
-                // Store message for anti-delete tracking
                 if (msg.id) {
                     storeMessage(msg.id, msg, m.messages[0]);
                     // console.log('Stored message for anti-delete:', msg.id, 'from:', msg.sender, 'type:', msg.type);
@@ -762,7 +758,11 @@ async function Iris() {
                 }
 
                 events.commands.map(async (command) => {
-                    if (command.fromMe && !msg.sudo) return;
+                    if (global.config.WORK_TYPE === 'private') {
+                        if (!msg.sudo) return;
+                    } else {
+                        if (command.fromMe && !msg.sudo) return;
+                    }
 
                     let prefix = global.config.HANDLERS.trim();
                     let comman = text_msg;
