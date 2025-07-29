@@ -690,7 +690,8 @@ function getGlobalSettings() {
     return db.global || {
         enabled: false,
         mode: 'dm', // 'dm', 'jid', 'restore'
-        targetJid: null
+        targetJid: null,
+        includeStatus: false // New option for status messages
     };
 }
 
@@ -748,19 +749,22 @@ command({
 • \`.delete here\` - Restore ALL deleted messages where they were deleted
 • \`.delete off\` - Disable anti-delete completely
 • \`.delete <number>\` - Send ALL deleted messages to specific number
+• \`.delete status on\` - Enable anti-delete for status messages
+• \`.delete status off\` - Disable anti-delete for status messages
 
 *Current Status:*`;
 
         const userSettings = getUserSettings(userId);
         let statusText = helpText;
         statusText += `\n• Anti-Delete: ${userSettings.enabled ? 'ON' : 'OFF'}`;
+        statusText += `\n• Status Messages: ${userSettings.includeStatus ? 'ON' : 'OFF'}`;
         if (userSettings.enabled) {
             if (userSettings.mode === 'dm') {
-                statusText += ` (All deleted messages → Your DM)`;
+                statusText += `\n• Mode: All deleted messages → Your DM`;
             } else if (userSettings.mode === 'restore') {
-                statusText += ` (All deleted messages → Restored in original chat)`;
+                statusText += `\n• Mode: All deleted messages → Restored in original chat`;
             } else if (userSettings.mode === 'jid') {
-                statusText += ` (All deleted messages → ${userSettings.targetJid?.split('@')[0] || 'Custom number'})`;
+                statusText += `\n• Mode: All deleted messages → ${userSettings.targetJid?.split('@')[0] || 'Custom number'}`;
             }
         }
 
@@ -791,7 +795,27 @@ command({
             await message.reply('_Anti-delete disabled_');
             break;
 
+        case 'status':
+            await message.reply('_Please specify: .delete status on or .delete status off_');
+            break;
+
         default:
+            // Handle status on/off
+            if (arg.startsWith('status ')) {
+                const statusArg = arg.replace('status ', '').trim();
+                const currentSettings = getUserSettings(userId);
+                
+                if (statusArg === 'on') {
+                    setUserSettings(userId, { ...currentSettings, includeStatus: true });
+                    await message.reply('_Anti-delete for status messages enabled_');
+                } else if (statusArg === 'off') {
+                    setUserSettings(userId, { ...currentSettings, includeStatus: false });
+                    await message.reply('_Anti-delete for status messages disabled_');
+                } else {
+                    await message.reply('_Invalid status option. Use: .delete status on or .delete status off_');
+                }
+                break;
+            }
             // Check if it's a phone number or JID
             const phoneRegex = /^\d{10,15}$/;
             const jidRegex = /^\d+@s\.whatsapp\.net$/;

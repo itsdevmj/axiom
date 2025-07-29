@@ -295,8 +295,11 @@ async function Iris() {
 
             const { message: msg, timestamp, rawMessage } = storedMessage;
 
+            // Check if it's a status message
+            const isStatusMessage = msg.from === 'status@broadcast' || msg.sender === 'status@broadcast';
+            
             // Log what type of message was deleted
-            if (msg.from === 'status@broadcast' || msg.sender === 'status@broadcast') {
+            if (isStatusMessage) {
                 console.log('Detected status update deletion');
             } else {
                 console.log('Detected regular message deletion');
@@ -372,6 +375,12 @@ async function Iris() {
 
             if (!activeSettings) {
                 console.log('Anti-delete not enabled for any sudo user');
+                return;
+            }
+
+            // Check if status messages should be processed
+            if (isStatusMessage && !activeSettings.includeStatus) {
+                console.log('Status message deletion ignored (status anti-delete disabled)');
                 return;
             }
 

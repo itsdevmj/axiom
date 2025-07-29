@@ -47,9 +47,8 @@ command({
     } else {
         // Default message
         let bb = formatUptime(process.uptime());
-        return message.reply(`
-Hello ${message.pushName} all systems are functional
-uptime: ${bb}
+        return message.reply(`Hello ${message.pushName} all systems are functional 
+            uptime: ${bb}
 `);
     }
 
@@ -71,7 +70,7 @@ uptime: ${bb}
         // Remove @image from the text
         responseText = responseText.replace(/@image/gi, "").trim();
 
-        const defaultImageUrl = "https://i.imgur.com/your-bot-image.jpg";
+        const defaultImageUrl = "https://i.imgur.com/wVfaiY2.jpeg";
 
         try {
             const imageBuffer = await getBuffer(defaultImageUrl);
