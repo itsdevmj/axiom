@@ -14,13 +14,8 @@ command({
 }, async (message, match) => {
     const defaultRepo = "https://github.com/itsdevmj/axiom.git";
     const repoUrl = match ? match.trim() : defaultRepo;
-    
-    // Validate GitHub URL format
-    if (match && !match.includes('github.com') && !match.includes('.git')) {
-        return await message.reply("Invalid repository URL. Please provide a valid GitHub repository URL.");
-    }
 
-    await message.reply(`Checking for updates...`);
+    await message.reply("Checking for updates");
 
     try {
         // Check if we have a remote origin, if not add it
@@ -29,19 +24,12 @@ command({
 
         if (!originRemote) {
             await git.addRemote('origin', repoUrl);
-            await message.reply("Remote origin added successfully.");
         } else if (originRemote.refs.fetch !== repoUrl) {
             await git.remote(['set-url', 'origin', repoUrl]);
-            await message.reply("Remote origin URL updated.");
         }
 
-        // Fetch from the specified repository with timeout
-        await Promise.race([
-            git.fetch('origin'),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Fetch timeout after 30 seconds')), 30000)
-            )
-        ]);
+        // Fetch from the specified repository
+        await git.fetch('origin');
 
         // Get current branch
         const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
@@ -55,7 +43,7 @@ command({
             return await message.reply("Bot is already up to date.");
         }
 
-        await message.reply("Update available. Pulling latest changes...");
+        await message.reply("Update available Installing....");
 
         // Stash any local changes to prevent conflicts
         try {
@@ -65,43 +53,17 @@ command({
         }
 
         // Pull the latest changes
-        const pullResult = await git.pull('origin', branch);
+        await git.pull('origin', branch);
 
-        if (pullResult.summary.changes || pullResult.summary.insertions || pullResult.summary.deletions) {
-            await message.reply("Code updated successfully. Installing dependencies...");
-            
-            // Use promisified exec for better error handling
-            const execPromise = util.promisify(exec);
-            
-            try {
-                const { stdout, stderr } = await execPromise('npm install --production');
-                
-                if (stderr && !stderr.includes('npm WARN')) {
-                    await message.reply(`Dependencies installed with warnings:\n${stderr.substring(0, 500)}`);
-                } else {
-                    await message.reply("Update completed successfully. Please restart the bot to apply changes.");
-                }
-                
-            } catch (npmErr) {
-                await message.reply(`Code updated but dependency installation failed:\n${npmErr.message.substring(0, 500)}\n\nPlease run 'npm install' manually.`);
-            }
-            
-        } else {
-            await message.reply("Pull completed but no file changes detected.");
-        }
+        // Install dependencies
+        const execPromise = util.promisify(exec);
+        await execPromise('npm install --omit=dev');
+
+        await message.reply("Update successful");
 
     } catch (err) {
         console.error('Update error:', err);
-        
-        if (err.message.includes('timeout')) {
-            await message.reply("Update failed: Connection timeout. Please check your internet connection and try again.");
-        } else if (err.message.includes('not found') || err.message.includes('does not exist')) {
-            await message.reply("Update failed: Repository not found. Please check the repository URL.");
-        } else if (err.message.includes('permission denied') || err.message.includes('authentication')) {
-            await message.reply("Update failed: Access denied. Please check repository permissions.");
-        } else {
-            await message.reply(`Update failed: ${err.message.substring(0, 300)}\n\nTry: .update ${defaultRepo}`);
-        }
+        await message.reply("Update failed");
     }
 });
 
