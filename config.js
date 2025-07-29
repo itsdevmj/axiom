@@ -20,7 +20,7 @@ global.config = {
   HANDLERS: process.env.HANDLER || '.',
   BRANCH: 'master',
   PACKNAME: process.env.PACKNAME || 'Axiom',
-  AUTHOR: process.env.AUTHOR || 'masterj',
+  AUTHOR: process.env.AUTHOR || 'Masterj',
   SUDO: initialSudo,
   CALL_REJECT: process.env.CALL_REJECT === 'true' || false,
   OWNER_NAME: process.env.OWNER_NAME || 'Masterj',
