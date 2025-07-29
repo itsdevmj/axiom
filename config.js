@@ -23,7 +23,7 @@ global.config = {
   AUTHOR: process.env.AUTHOR || 'masterj',
   SUDO: initialSudo,
   CALL_REJECT: process.env.CALL_REJECT === 'true' || false,
-  OWNER_NAME: process.env.OWNER_NAME || 'masterj',
+  OWNER_NAME: process.env.OWNER_NAME || 'Masterj',
   BOT_NAME: process.env.BOT_NAME || 'Axiom',
   WORK_TYPE: process.env.WORK_TYPE || 'private',
   AUTO_VIEW_STATUS: process.env.AUTO_VIEW_STATUS === 'true' || false,
