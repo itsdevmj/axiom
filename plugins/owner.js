@@ -59,7 +59,12 @@ command({
         const execPromise = util.promisify(exec);
         await execPromise('npm install --omit=dev');
 
-        await message.reply("Update successful");
+        await message.reply("Update successful! Restarting bot...");
+
+        // Restart the bot after successful update
+        setTimeout(() => {
+            process.exit(0);
+        }, 2000); // Give 2 seconds for the message to be sent
 
     } catch (err) {
         console.error('Update error:', err);

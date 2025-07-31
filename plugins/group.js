@@ -741,7 +741,7 @@ async function performAction(message, action, reason) {
     switch (action) {
         case 'warn':
             const warningCount = addWarning(message.jid, message.participant);
-            
+
             if (warningCount >= 3) {
                 // Kick after 3 warnings
                 await message.kick([message.participant]);
