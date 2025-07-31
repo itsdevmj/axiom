@@ -729,6 +729,12 @@ async function performAction(message, action, reason) {
         return;
     }
 
+    // Check if the user is an admin - admins should not be affected by moderation actions
+    const isUserAdmin = await isAdmin(message.jid, message.participant, message.client);
+    if (isUserAdmin) {
+        return; // Skip moderation for admins
+    }
+
     // Always delete the message first
     await message.delete(message.key);
 
