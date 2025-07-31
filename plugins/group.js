@@ -993,6 +993,10 @@ command({
     if (!message.isGroup) return;
     if (!message.text) return;
 
+    // IMPORTANT: Skip ALL moderation for group admins
+    const isUserAdmin = await isAdmin(message.jid, message.participant || message.user, message.client);
+    if (isUserAdmin) return; // Admins are completely exempt from moderation
+
     const messageText = message.text;
 
     // Check antilink
