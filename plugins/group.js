@@ -722,6 +722,35 @@ function containsBannedWords(text, bannedWords) {
 }
 
 
+// Helper function to check if user is admin (more reliable)
+async function isGroupAdmin(groupJid, userJid, client) {
+    try {
+        const groupMetadata = await client.groupMetadata(groupJid);
+        const groupAdmins = groupMetadata.participants
+            .filter((participant) => participant.admin !== null)
+            .map((participant) => participant.id);
+
+        // Direct match
+        if (groupAdmins.includes(userJid)) {
+            return true;
+        }
+
+        // Extract phone number for comparison (handle different formats)
+        const extractNumber = (id) => {
+            if (!id) return null;
+            return id.split('@')[0].split(':')[0];
+        };
+
+        const userNumber = extractNumber(userJid);
+        const adminNumbers = groupAdmins.map(extractNumber);
+
+        return adminNumbers.includes(userNumber);
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+    }
+}
+
 // Helper function to perform actions with warning system
 async function performAction(message, action, reason) {
     const isBotAdmin = await isAdmin(message.jid, message.client.user.id, message.client);
@@ -730,7 +759,7 @@ async function performAction(message, action, reason) {
     }
 
     // Check if the user is an admin - admins should not be affected by moderation actions
-    const isUserAdmin = await isAdmin(message.jid, message.participant, message.client);
+    const isUserAdmin = await isGroupAdmin(message.jid, message.participant || message.user, message.client);
     if (isUserAdmin) {
         return; // Skip moderation for admins
     }
@@ -984,6 +1013,41 @@ command({
     await message.reply(status);
 });
 
+// Debug command to check admin status
+command({
+    pattern: 'checkadmin',
+    fromMe: false,
+    desc: 'Check if user is admin (debug)',
+    type: 'group'
+}, async (message, match) => {
+    if (!message.isGroup) return await message.reply('_This command only works in groups_');
+
+    try {
+        const groupMetadata = await message.client.groupMetadata(message.jid);
+        const allAdmins = groupMetadata.participants
+            .filter((participant) => participant.admin !== null)
+            .map((participant) => participant.id);
+
+        const userToCheck = message.participant || message.user;
+        const isUserAdminOld = await isAdmin(message.jid, userToCheck, message.client);
+        const isUserAdminNew = await isGroupAdmin(message.jid, userToCheck, message.client);
+
+        let debug = `*Admin Debug Info*\n\n`;
+        debug += `*Your ID:* ${userToCheck}\n`;
+        debug += `*Old isAdmin:* ${isUserAdminOld ? 'YES' : 'NO'}\n`;
+        debug += `*New isGroupAdmin:* ${isUserAdminNew ? 'YES' : 'NO'}\n\n`;
+        debug += `*All Group Admins (${allAdmins.length}):*\n`;
+        allAdmins.forEach((admin, index) => {
+            const number = admin.split('@')[0].split(':')[0];
+            debug += `${index + 1}. +${number}\n`;
+        });
+
+        await message.reply(debug);
+    } catch (error) {
+        await message.reply(`Error: ${error.message}`);
+    }
+});
+
 // AUTO-MODERATION (Text message handler)
 command({
     on: 'text',
@@ -994,7 +1058,7 @@ command({
     if (!message.text) return;
 
     // IMPORTANT: Skip ALL moderation for group admins
-    const isUserAdmin = await isAdmin(message.jid, message.participant || message.user, message.client);
+    const isUserAdmin = await isGroupAdmin(message.jid, message.participant || message.user, message.client);
     if (isUserAdmin) return; // Admins are completely exempt from moderation
 
     const messageText = message.text;
