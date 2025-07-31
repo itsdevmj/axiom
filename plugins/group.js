@@ -953,6 +953,37 @@ command({
     await message.reply(`*Banned Words List*\n\n${wordList}\n\nTotal: ${groupSettings.words.length} words`);
 });
 
+// Debug command to check moderation status
+command({
+    pattern: 'modstatus',
+    fromMe: false,
+    desc: 'Check moderation settings status',
+    type: 'group'
+}, async (message, match) => {
+    if (!message.isGroup) return await message.reply('_This command only works in groups_');
+
+    const isUserAdmin = await isAdmin(message.jid, message.participant, message.client);
+    if (!isUserAdmin) return await message.reply('_You are not an admin_');
+
+    const antilink = getAntilink();
+    const antiword = getAntiword();
+
+    const antilinkSettings = antilink[message.jid] || { enabled: false, action: 'warn' };
+    const antiwordSettings = antiword[message.jid] || { enabled: false, action: 'warn', words: [] };
+
+    let status = `*Moderation Status*\n\n`;
+    status += `*Antilink:*\n`;
+    status += `• Enabled: ${antilinkSettings.enabled ? 'YES' : 'NO'}\n`;
+    status += `• Action: ${antilinkSettings.action.toUpperCase()}\n\n`;
+    status += `*Antiword:*\n`;
+    status += `• Enabled: ${antiwordSettings.enabled ? 'YES' : 'NO'}\n`;
+    status += `• Action: ${antiwordSettings.action.toUpperCase()}\n`;
+    status += `• Banned Words: ${antiwordSettings.words ? antiwordSettings.words.length : 0}\n\n`;
+    status += `*Group ID:* ${message.jid}`;
+
+    await message.reply(status);
+});
+
 // AUTO-MODERATION (Text message handler)
 command({
     on: 'text',
@@ -961,10 +992,6 @@ command({
 }, async (message, match, m) => {
     if (!message.isGroup) return;
     if (!message.text) return;
-
-    // Skip if user is admin
-    const isUserAdmin = await isAdmin(message.jid, message.participant, message.client);
-    if (isUserAdmin) return;
 
     const messageText = message.text;
 
