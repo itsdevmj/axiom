@@ -90,10 +90,10 @@ command({
 });
 
 // TTS converter - Text to speech
-const apiUrl = 'https://api.elevenlabs.io/v1/text-to-speech/ErXwobaYiN019PkySvjV/stream';
-const apiKey = '527cdd000ff0fca268a9d8eaf5d218a8';
+// const apiUrl = 'https://api.elevenlabs.io/v1/text-to-speech/ErXwobaYiN019PkySvjV/stream';
+// const apiKey = '527cdd000ff0fca268a9d8eaf5d218a8';
 
-command({
+/* command({
     pattern: "tts",
     fromMe: true,
     desc: "Text - VN",
@@ -118,4 +118,4 @@ command({
     await message.client.sendMessage(message.jid, { audio: bb, mimetype: "audio/mp4", waveform: [20, 60, 70, 54, 69, 80, 39], ptt: true }, { quoted: m });
 
     await fs.unlinkSync("temp.mp3");
-});
+}); */
