@@ -297,7 +297,7 @@ async function Iris() {
 
             // Check if it's a status message
             const isStatusMessage = msg.from === 'status@broadcast' || msg.sender === 'status@broadcast';
-            
+
             // Log what type of message was deleted
             if (isStatusMessage) {
                 console.log('Detected status update deletion');
@@ -721,6 +721,13 @@ async function Iris() {
                 let msg = await serialize(JSON.parse(JSON.stringify(m.messages[0])), conn);
                 if (!msg) return;
 
+                const senderrr = msg.key.fromMe ? conn.user.id : (msg.key.participant || msg.key.remoteJid);
+                const senderNum = senderrr.split('@')[0];
+                const isPrivateMode = global.config.WORK_TYPE.toLowerCase() === 'private';
+                const sudoList = (global.config.SUDO || []).map(num => num.toString().trim());
+                const isSudo = sudoList.includes(senderNum) || msg.key.fromMe;
+
+                if (isPrivateMode && !isSudo) return;
 
                 const features = global.PluginDB.getBotFeatures();
                 const jid = msg.key && msg.key.remoteJid;
@@ -767,11 +774,6 @@ async function Iris() {
                 }
 
                 events.commands.map(async (command) => {
-                    if (global.config.WORK_TYPE === 'private') {
-                        if (!msg.sudo) return;
-                    } else {
-                        if (command.fromMe && !msg.sudo) return;
-                    }
 
                     let prefix = global.config.HANDLERS.trim();
                     let comman = text_msg;
@@ -828,7 +830,7 @@ async function Iris() {
             }
         });
     } catch (error) {
-        console.error("Error in Iris function:", error);
+        console.error("Error in axiom function:", error);
     }
 }
 
