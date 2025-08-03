@@ -727,7 +727,7 @@ async function Iris() {
                 const sudoList = (global.config.SUDO || []).map(num => num.toString().trim());
                 const isSudo = sudoList.includes(senderNum) || msg.key.fromMe;
 
-                if (isPrivateMode && !isSudo) return;
+
 
                 const features = global.PluginDB.getBotFeatures();
                 const jid = msg.key && msg.key.remoteJid;
@@ -774,6 +774,14 @@ async function Iris() {
                 }
 
                 events.commands.map(async (command) => {
+                    // Check if this is an automatic handler (should always work)
+                    const isAutomaticHandler = command.on && command.dontAddCommandList;
+
+                    // Apply private/public mode check only to manual commands
+                    if (!isAutomaticHandler) {
+                        if (isPrivateMode && !isSudo) return;
+                        if (!isPrivateMode && command.fromMe && !isSudo) return;
+                    }
 
                     let prefix = global.config.HANDLERS.trim();
                     let comman = text_msg;
