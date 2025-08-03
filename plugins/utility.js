@@ -868,3 +868,186 @@ command({
         return message.reply("Failed to tag members!");
     }
 });
+
+command({
+    pattern: "play ?(.*)",
+    fromMe: isPrivate,
+    desc: "Find and send song by name",
+    type: "utility"
+}, async (message, match) => {
+    const query = match ? match.trim() : '';
+    
+    if (!query) {
+        return await message.reply('Please provide a song name to search\n\nExample:\n.play Blinding Lights\n.play Shape of You\n.play Bohemian Rhapsody');
+    }
+
+    try {
+        // Send searching message
+        const searchMsg = await message.reply(`🔍 Searching for: *${query}*\n\nPlease wait...`);
+
+        // Import YouTube functions
+        const { ytdl, ytSearch } = require('../lib/yt');
+        
+        // Search for the song
+        const searchResults = await ytSearch(query);
+        
+        if (!searchResults || searchResults.length === 0) {
+            return await message.reply(`❌ No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+        }
+
+        // Get the first result
+        const song = searchResults[0];
+        
+        // Update search message with found song info
+        await message.client.sendMessage(message.jid, {
+            text: `🎵 *Found Song*\n\n*Title:* ${song.title}\n*Channel:* ${song.channel}\n*URL:* ${song.url}\n\n⬇️ Downloading audio...`,
+            edit: searchMsg.key
+        });
+
+        // Download audio using the new API
+        const audioData = await ytdl(song.url, 'audio');
+        
+        if (audioData.error || !audioData.buffer) {
+            return await message.reply(`❌ Failed to download: *${song.title}*\n\nError: ${audioData.error || 'Unknown error'}\n\nTry again or use a different song.`);
+        }
+
+        // Get thumbnail buffer
+        let thumbnailBuffer = null;
+        try {
+            const { getBuffer } = require('../lib/functions');
+            thumbnailBuffer = await getBuffer(song.thumbnail);
+        } catch (thumbError) {
+            console.log('Thumbnail fetch failed:', thumbError);
+        }
+
+        // Send audio file
+        await message.client.sendMessage(message.jid, {
+            audio: audioData.buffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${audioData.title}.mp3`,
+            contextInfo: {
+                externalAdReply: {
+                    title: audioData.title,
+                    body: `🎵 Downloaded from YouTube`,
+                    thumbnail: thumbnailBuffer,
+                    mediaType: 2,
+                    mediaUrl: audioData.youtube_url,
+                    sourceUrl: audioData.youtube_url
+                }
+            }
+        });
+
+        // Delete the search/download message
+        try {
+            await message.client.sendMessage(message.jid, {
+                delete: searchMsg.key
+            });
+        } catch (deleteError) {
+            // Ignore delete errors
+        }
+
+    } catch (error) {
+        console.error('Play command error:', error);
+        
+        // Try fallback method
+        try {
+            const { getBuffer } = require('../lib/functions');
+            
+            // Simple YouTube search URL
+            const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            
+            await message.reply(`❌ Audio download failed for: *${query}*\n\n🔗 You can search manually here:\n${searchUrl}\n\nOr try again with a different song name.`);
+            
+        } catch (fallbackError) {
+            await message.reply(`❌ Failed to find song: *${query}*\n\nPlease check your internet connection and try again.`);
+        }
+    }
+});
+
+
+command({
+    pattern: "video ?(.*)",
+    fromMe: isPrivate,
+    desc: "Find and send video by name",
+    type: "utility"
+}, async (message, match) => {
+    const query = match ? match.trim() : '';
+    
+    if (!query) {
+        return await message.reply('Please provide a video name to search\n\nExample:\n.video Blinding Lights\n.video Shape of You\n.video Bohemian Rhapsody');
+    }
+
+    try {
+        // Send searching message
+        const searchMsg = await message.reply(`🔍 Searching for video: *${query}*\n\nPlease wait...`);
+
+        // Import YouTube functions
+        const { ytdl, ytSearch } = require('../lib/yt');
+        
+        // Search for the video
+        const searchResults = await ytSearch(query);
+        
+        if (!searchResults || searchResults.length === 0) {
+            return await message.reply(`❌ No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+        }
+
+        // Get the first result
+        const video = searchResults[0];
+        
+        // Update search message with found video info
+        await message.client.sendMessage(message.jid, {
+            text: `🎬 *Found Video*\n\n*Title:* ${video.title}\n*Channel:* ${video.channel}\n*URL:* ${video.url}\n\n⬇️ Downloading video...`,
+            edit: searchMsg.key
+        });
+
+        // Download video using the new API
+        const videoData = await ytdl(video.url, 'video');
+        
+        if (videoData.error || !videoData.buffer) {
+            return await message.reply(`❌ Failed to download: *${video.title}*\n\nError: ${videoData.error || 'Unknown error'}\n\nTry again or use a different video.`);
+        }
+
+        // Get thumbnail buffer
+        let thumbnailBuffer = null;
+        try {
+            const { getBuffer } = require('../lib/functions');
+            thumbnailBuffer = await getBuffer(video.thumbnail);
+        } catch (thumbError) {
+            console.log('Thumbnail fetch failed:', thumbError);
+        }
+
+        // Send video file
+        await message.client.sendMessage(message.jid, {
+            video: videoData.buffer,
+            mimetype: 'video/mp4',
+            fileName: `${videoData.title}.mp4`,
+            caption: `🎬 *${videoData.title}*\n\n📺 Downloaded from YouTube`,
+            contextInfo: {
+                externalAdReply: {
+                    title: videoData.title,
+                    body: `🎬 Downloaded from YouTube`,
+                    thumbnail: thumbnailBuffer,
+                    mediaType: 2,
+                    mediaUrl: videoData.youtube_url,
+                    sourceUrl: videoData.youtube_url
+                }
+            }
+        });
+
+        // Delete the search/download message
+        try {
+            await message.client.sendMessage(message.jid, {
+                delete: searchMsg.key
+            });
+        } catch (deleteError) {
+            // Ignore delete errors
+        }
+
+    } catch (error) {
+        console.error('Video command error:', error);
+        
+        // Fallback error message
+        const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+        await message.reply(`❌ Video download failed for: *${query}*\n\n🔗 You can search manually here:\n${searchUrl}\n\nOr try again with a different video name.`);
+    }
+});

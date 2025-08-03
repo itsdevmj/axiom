@@ -1,6 +1,6 @@
 FROM quay.io/axiom-md/axiom:latest
 
-LABEL version="4.3"
+LABEL version="4.4"
 RUN git clone https://github.com/itsdevmj/axiom.git /root/Axiom
 WORKDIR /root/Axiom
 RUN rm -rf node_modules yarn.lock
