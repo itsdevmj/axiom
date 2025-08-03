@@ -847,7 +847,7 @@ global.antiDeleteDB = {
 // Tag command - Tag users with replied message
 command({
     pattern: "tag ?(.*)",
-    fromMe: isPrivate, // true: only from sudo numbers, false: from everyone, isPrivate: private mode
+    fromMe: false, // true: only from sudo numbers, false: from everyone, isPrivate: private mode
     desc: "Tag users with replied message",
     type: "group"
 }, async (message, match) => {
