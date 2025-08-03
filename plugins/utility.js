@@ -1,4 +1,4 @@
-const { command, isAdmin, isPrivate } = require('../lib/');
+const { command, isAdmin, } = require('../lib/');
 const { getAutoReact, setAutoReact, removeAutoReact, getSticky, setSticky, removeSticky, getAntidelete, setAntidelete } = global.PluginDB;
 
 // Helper function to validate emoji
@@ -847,7 +847,7 @@ global.antiDeleteDB = {
 // Tag command - Tag users with replied message
 command({
     pattern: "tag ?(.*)",
-    fromMe: false, // true: only from sudo numbers, false: from everyone, isPrivate: private mode
+    fromMe: false, // true: only from sudo numbers, false: from everyone, false: private mode
     desc: "Tag users with replied message",
     type: "group"
 }, async (message, match) => {
@@ -870,45 +870,66 @@ command({
 });
 
 command({
-    pattern: "play ?(.*)",
-    fromMe: isPrivate,
+    pattern: "play",
+    fromMe: false,
     desc: "Find and send song by name",
     type: "utility"
 }, async (message, match) => {
     const query = match ? match.trim() : '';
-    
+
     if (!query) {
-        return await message.reply('Please provide a song name to search\n\nExample:\n.play Blinding Lights\n.play Shape of You\n.play Bohemian Rhapsody');
+        return await message.reply('Please provide a song name or YouTube URL\n\nExample:\n.play Blinding Lights\n.play Shape of You\n.play https://www.youtube.com/watch?v=4NRXx6U8ABQ');
     }
 
     try {
         // Send searching message
-        const searchMsg = await message.reply(`🔍 Searching for: *${query}*\n\nPlease wait...`);
+        const searchMsg = await message.reply(`Searching for: *${query}*\n\nPlease wait...`);
 
         // Import YouTube functions
         const { ytdl, ytSearch } = require('../lib/yt');
-        
-        // Search for the song
-        const searchResults = await ytSearch(query);
-        
-        if (!searchResults || searchResults.length === 0) {
-            return await message.reply(`❌ No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+        const { isYT } = require('../lib/functions');
+
+        let song;
+
+        // Check if input is a YouTube URL
+        if (isYT(query)) {
+            song = {
+                title: 'YouTube Video',
+                url: query,
+                channel: 'Unknown',
+                thumbnail: 'https://img.youtube.com/vi/' + query.split('v=')[1]?.split('&')[0] + '/mqdefault.jpg'
+            };
+        } else {
+            // Search for the song
+            const searchResults = await ytSearch(query);
+
+            if (!searchResults || searchResults.length === 0) {
+                return await message.reply(`No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+            }
+
+            // Get the first result
+            song = searchResults[0];
         }
 
-        // Get the first result
-        const song = searchResults[0];
-        
         // Update search message with found song info
         await message.client.sendMessage(message.jid, {
-            text: `🎵 *Found Song*\n\n*Title:* ${song.title}\n*Channel:* ${song.channel}\n*URL:* ${song.url}\n\n⬇️ Downloading audio...`,
+            text: `*Found Song*\n\n*Title:* ${song.title}\n*Channel:* ${song.channel}\n*URL:* ${song.url}\n\nGetting download link...`,
             edit: searchMsg.key
         });
 
-        // Download audio using the new API
-        const audioData = await ytdl(song.url, 'audio');
-        
-        if (audioData.error || !audioData.buffer) {
-            return await message.reply(`❌ Failed to download: *${song.title}*\n\nError: ${audioData.error || 'Unknown error'}\n\nTry again or use a different song.`);
+        // Get download info using the new API (without downloading buffer)
+        console.log('Calling ytdl with URL:', song.url);
+        const audioData = await ytdl(song.url, 'info');
+        console.log('ytdl response:', JSON.stringify(audioData, null, 2));
+
+        if (audioData.error) {
+            console.error('Audio data error:', audioData.error);
+            return await message.reply(`API Error: *${audioData.error}*\n\nURL: ${song.url}\n\nTry again or use a different song.`);
+        }
+
+        if (!audioData.audio_url) {
+            console.error('No audio URL in response:', audioData);
+            return await message.reply(`No audio download link found\n\nTry again or use a different song.`);
         }
 
         // Get thumbnail buffer
@@ -920,9 +941,9 @@ command({
             console.log('Thumbnail fetch failed:', thumbError);
         }
 
-        // Send audio file
+        // Send audio as document (prevents crashes with large files)
         await message.client.sendMessage(message.jid, {
-            audio: audioData.buffer,
+            document: { url: audioData.audio_url },
             mimetype: 'audio/mpeg',
             fileName: `${audioData.title}.mp3`,
             contextInfo: {
@@ -948,16 +969,16 @@ command({
 
     } catch (error) {
         console.error('Play command error:', error);
-        
+
         // Try fallback method
         try {
             const { getBuffer } = require('../lib/functions');
-            
+
             // Simple YouTube search URL
             const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-            
-            await message.reply(`❌ Audio download failed for: *${query}*\n\n🔗 You can search manually here:\n${searchUrl}\n\nOr try again with a different song name.`);
-            
+
+            await message.reply(`Audio download failed for: *${query}*\n\nYou can search manually here:\n${searchUrl}\n\nOr try again with a different song name.`);
+
         } catch (fallbackError) {
             await message.reply(`❌ Failed to find song: *${query}*\n\nPlease check your internet connection and try again.`);
         }
@@ -966,45 +987,58 @@ command({
 
 
 command({
-    pattern: "video ?(.*)",
-    fromMe: isPrivate,
+    pattern: "video",
+    fromMe: false,
     desc: "Find and send video by name",
     type: "utility"
 }, async (message, match) => {
     const query = match ? match.trim() : '';
-    
+
     if (!query) {
-        return await message.reply('Please provide a video name to search\n\nExample:\n.video Blinding Lights\n.video Shape of You\n.video Bohemian Rhapsody');
+        return await message.reply('Please provide a video name or YouTube URL\n\nExample:\n.video Blinding Lights\n.video Shape of You\n.video https://www.youtube.com/watch?v=4NRXx6U8ABQ');
     }
 
     try {
         // Send searching message
-        const searchMsg = await message.reply(`🔍 Searching for video: *${query}*\n\nPlease wait...`);
+        const searchMsg = await message.reply(`Searching for video: *${query}*\n\nPlease wait...`);
 
         // Import YouTube functions
         const { ytdl, ytSearch } = require('../lib/yt');
-        
-        // Search for the video
-        const searchResults = await ytSearch(query);
-        
-        if (!searchResults || searchResults.length === 0) {
-            return await message.reply(`❌ No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+        const { isYT } = require('../lib/functions');
+
+        let video;
+
+        // Check if input is a YouTube URL
+        if (isYT(query)) {
+            video = {
+                title: 'YouTube Video',
+                url: query,
+                channel: 'Unknown',
+                thumbnail: 'https://img.youtube.com/vi/' + query.split('v=')[1]?.split('&')[0] + '/mqdefault.jpg'
+            };
+        } else {
+            // Search for the video
+            const searchResults = await ytSearch(query);
+
+            if (!searchResults || searchResults.length === 0) {
+                return await message.reply(`No results found for: *${query}*\n\nTry with different keywords or check spelling.`);
+            }
+
+            // Get the first result
+            video = searchResults[0];
         }
 
-        // Get the first result
-        const video = searchResults[0];
-        
         // Update search message with found video info
         await message.client.sendMessage(message.jid, {
-            text: `🎬 *Found Video*\n\n*Title:* ${video.title}\n*Channel:* ${video.channel}\n*URL:* ${video.url}\n\n⬇️ Downloading video...`,
+            text: `*Found Video*\n\n*Title:* ${video.title}\n*Channel:* ${video.channel}\n*URL:* ${video.url}\n\nGetting download link...`,
             edit: searchMsg.key
         });
 
-        // Download video using the new API
-        const videoData = await ytdl(video.url, 'video');
-        
-        if (videoData.error || !videoData.buffer) {
-            return await message.reply(`❌ Failed to download: *${video.title}*\n\nError: ${videoData.error || 'Unknown error'}\n\nTry again or use a different video.`);
+        // Get download info using the new API (without downloading buffer)
+        const videoData = await ytdl(video.url, 'info');
+
+        if (videoData.error || !videoData.video_url) {
+            return await message.reply(`Failed to get download link: *${video.title}*\n\nError: ${videoData.error || 'No video URL found'}\n\nTry again or use a different video.`);
         }
 
         // Get thumbnail buffer
@@ -1016,16 +1050,16 @@ command({
             console.log('Thumbnail fetch failed:', thumbError);
         }
 
-        // Send video file
+        // Send video as document (prevents crashes with large files)
         await message.client.sendMessage(message.jid, {
-            video: videoData.buffer,
+            document: { url: videoData.video_url },
             mimetype: 'video/mp4',
             fileName: `${videoData.title}.mp4`,
-            caption: `🎬 *${videoData.title}*\n\n📺 Downloaded from YouTube`,
+            caption: `*${videoData.title}*\n\n📺 Downloaded from YouTube`,
             contextInfo: {
                 externalAdReply: {
                     title: videoData.title,
-                    body: `🎬 Downloaded from YouTube`,
+                    body: ` Downloaded from YouTube`,
                     thumbnail: thumbnailBuffer,
                     mediaType: 2,
                     mediaUrl: videoData.youtube_url,
@@ -1045,9 +1079,9 @@ command({
 
     } catch (error) {
         console.error('Video command error:', error);
-        
+
         // Fallback error message
         const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-        await message.reply(`❌ Video download failed for: *${query}*\n\n🔗 You can search manually here:\n${searchUrl}\n\nOr try again with a different video name.`);
+        await message.reply(`Video download failed for: *${query}*\n\nYou can search manually here:\n${searchUrl}\n\nOr try again with a different video name.`);
     }
 });
