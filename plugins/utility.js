@@ -26,7 +26,7 @@ command({
     let emoji = messageText.replace(new RegExp(`^\\${prefix}react\\s*`, "i"), "").trim();
 
     // Check if replying to a message
-    if (!message.reply_message) {
+    if (!message.quoted) {
         return await message.reply('Please reply to a message to react to it\n\nExample:\n*Reply to a message:* .react ❤️\n*Reply to a message:* .react 👍\n*Reply to a message:* .react 😂');
     }
 
@@ -44,7 +44,7 @@ command({
         await message.client.sendMessage(message.jid, {
             react: {
                 text: emoji,
-                key: message.reply_message.key
+                key: message.quoted.key
             }
         });
 
@@ -804,7 +804,7 @@ command({
             if (arg.startsWith('status ')) {
                 const statusArg = arg.replace('status ', '').trim();
                 const currentSettings = getUserSettings(userId);
-                
+
                 if (statusArg === 'on') {
                     setUserSettings(userId, { ...currentSettings, includeStatus: true });
                     await message.reply('_Anti-delete for status messages enabled_');
@@ -844,118 +844,27 @@ global.antiDeleteDB = {
     setGroupSettings
 };
 
-
+// Tag command - Tag users with replied message
 command({
-    pattern: 'tag ?(.*)',
-    fromMe: false,
-    desc: 'Resend quoted message with mentions (works with media and text)',
-    type: 'utility'
+    pattern: "tag ?(.*)",
+    fromMe: true,
+    desc: "Tag users with replied message",
+    type: "group"
 }, async (message, match) => {
-    // Check if replying to a message
-    if (!message.reply_message) {
-        return await message.reply('Please reply to a message to tag it\n\nExample:\n*Reply to any message:* .tag\n*Reply with custom text:* .tag Check this out!');
-    }
+    if (!message.isGroup) return message.reply("This command is for groups only!");
+    if (!message.quoted) return message.reply("Reply to a message to tag!");
 
     try {
-        const quotedMessage = message.reply_message;
-        const customText = match ? match.trim() : '';
-        
-        // Get all participants for mentions (works in both groups and DMs)
-        let mentions = [];
-        
-        if (message.isGroup) {
-            // In groups, get all participants
-            try {
-                const groupMetadata = await message.client.groupMetadata(message.jid);
-                mentions = groupMetadata.participants.map(p => p.id);
-            } catch (error) {
-                console.log('Error getting group metadata:', error);
-                // Fallback: mention the original sender and current user
-                mentions = [quotedMessage.sender, message.sender];
-            }
-        } else {
-            // In DMs, mention both participants
-            mentions = [quotedMessage.sender, message.sender];
-        }
+        const groupMetadata = await message.client.groupMetadata(message.jid);
+        const participants = groupMetadata.participants.map(u => u.id);
+        const quotedMessage = message.quoted;
 
-        // Remove duplicates and bot's own number
-        mentions = [...new Set(mentions)].filter(jid => jid !== message.client.user.id);
-
-        // Determine message type and content
-        const messageType = quotedMessage.type;
-        let messageOptions = {
-            mentions: mentions
-        };
-
-        // Handle different message types
-        if (messageType === 'conversation' || messageType === 'extendedTextMessage') {
-            // Text message
-            const originalText = quotedMessage.body || quotedMessage.text || '';
-            const tagText = customText || originalText || 'Tagged message';
-            
-            messageOptions.text = tagText;
-            
-        } else if (quotedMessage.message) {
-            // Media message - try to resend the actual media
-            try {
-                const mediaBuffer = await quotedMessage.download();
-                
-                if (mediaBuffer && Buffer.isBuffer(mediaBuffer)) {
-                    const caption = customText || quotedMessage.body || '';
-                    
-                    switch (messageType) {
-                        case 'imageMessage':
-                            messageOptions.image = mediaBuffer;
-                            if (caption) messageOptions.caption = caption;
-                            break;
-                            
-                        case 'videoMessage':
-                            messageOptions.video = mediaBuffer;
-                            if (caption) messageOptions.caption = caption;
-                            break;
-                            
-                        case 'audioMessage':
-                            const isVoiceNote = quotedMessage.message.audioMessage?.ptt;
-                            messageOptions.audio = mediaBuffer;
-                            messageOptions.mimetype = quotedMessage.message.audioMessage?.mimetype || 'audio/ogg; codecs=opus';
-                            messageOptions.ptt = isVoiceNote;
-                            break;
-                            
-                        case 'documentMessage':
-                            messageOptions.document = mediaBuffer;
-                            messageOptions.mimetype = quotedMessage.message.documentMessage?.mimetype || 'application/octet-stream';
-                            messageOptions.fileName = quotedMessage.message.documentMessage?.fileName || 'document';
-                            if (caption) messageOptions.caption = caption;
-                            break;
-                            
-                        case 'stickerMessage':
-                            messageOptions.sticker = mediaBuffer;
-                            break;
-                            
-                        default:
-                            // Fallback to text if media type not supported
-                            messageOptions.text = customText || 'Tagged media message';
-                    }
-                } else {
-                    // Media download failed, send text instead
-                    messageOptions.text = customText || `Tagged ${messageType.replace('Message', '')} (media unavailable)`;
-                }
-                
-            } catch (downloadError) {
-                console.log('Error downloading media:', downloadError);
-                // Fallback to text message
-                messageOptions.text = customText || `Tagged ${messageType.replace('Message', '')} (media unavailable)`;
-            }
-        } else {
-            // Unknown message type, send as text
-            messageOptions.text = customText || 'Tagged message';
-        }
-
-        // Send the tagged message
-        await message.client.sendMessage(message.jid, messageOptions);
-
+        await message.client.sendMessage(message.jid, {
+            text: quotedMessage.text || "",
+            mentions: participants
+        });
     } catch (error) {
-        console.log('Error in tag command:', error);
-        await message.reply('Error tagging message. Please try again.');
+        console.error("Tag Error:", error);
+        return message.reply("Failed to tag members!");
     }
 });
