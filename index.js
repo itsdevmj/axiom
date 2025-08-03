@@ -777,10 +777,10 @@ async function Iris() {
                     // Check if this is an automatic handler (should always work)
                     const isAutomaticHandler = command.on && command.dontAddCommandList;
 
-                    // Apply private/public mode check only to manual commands
+                    // Apply access control only to manual commands (cleaner logic)
                     if (!isAutomaticHandler) {
-                        if (isPrivateMode && !isSudo) return;
-                        if (!isPrivateMode && command.fromMe && !isSudo) return;
+                        // If user is NOT sudo AND (command requires sudo OR bot is in private mode) → block
+                        if (!isSudo && (command.fromMe || isPrivateMode)) return;
                     }
 
                     let prefix = global.config.HANDLERS.trim();

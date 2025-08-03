@@ -1,4 +1,4 @@
-const { command, isAdmin } = require('../lib/');
+const { command, isAdmin, isPrivate } = require('../lib/');
 const { getAutoReact, setAutoReact, removeAutoReact, getSticky, setSticky, removeSticky, getAntidelete, setAntidelete } = global.PluginDB;
 
 // Helper function to validate emoji
@@ -847,7 +847,7 @@ global.antiDeleteDB = {
 // Tag command - Tag users with replied message
 command({
     pattern: "tag ?(.*)",
-    fromMe: true,
+    fromMe: isPrivate, // true: only from sudo numbers, false: from everyone, isPrivate: private mode
     desc: "Tag users with replied message",
     type: "group"
 }, async (message, match) => {
