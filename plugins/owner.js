@@ -18,7 +18,6 @@ command({
     await message.reply("Checking for updates");
 
     try {
-        // Check if we have a remote origin, if not add it
         const remotes = await git.getRemotes(true);
         const originRemote = remotes.find(remote => remote.name === 'origin');
 
@@ -27,15 +26,9 @@ command({
         } else if (originRemote.refs.fetch !== repoUrl) {
             await git.remote(['set-url', 'origin', repoUrl]);
         }
-
-        // Fetch from the specified repository
         await git.fetch('origin');
-
-        // Get current branch
         const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
         const branch = currentBranch.trim() || 'master';
-
-        // Compare commits to check for updates
         const localCommit = await git.revparse(['HEAD']);
         const remoteCommit = await git.revparse([`origin/${branch}`]);
 
@@ -44,27 +37,18 @@ command({
         }
 
         await message.reply("Update available Installing....");
-
-        // Stash any local changes to prevent conflicts
         try {
             await git.stash();
         } catch (stashErr) {
-            // Ignore stash errors if no changes to stash
         }
-
-        // Pull the latest changes
         await git.pull('origin', branch);
-
-        // Install dependencies
         const execPromise = util.promisify(exec);
         await execPromise('npm install --omit=dev');
 
         await message.reply("Update successful! Restarting bot...");
-
-        // Restart the bot after successful update
         setTimeout(() => {
             process.exit(0);
-        }, 2000); // Give 2 seconds for the message to be sent
+        }, 2000); 
 
     } catch (err) {
         console.error('Update error:', err);

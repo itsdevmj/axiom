@@ -986,7 +986,6 @@ command({
 // AUTO-MODERATION (Text message handler)
 command({
     on: 'text',
-    fromMe: false,
     dontAddCommandList: true
 }, async (message, match, m) => {
     if (!message.isGroup) return;
